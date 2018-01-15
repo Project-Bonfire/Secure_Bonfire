@@ -15,9 +15,7 @@ package TB_Package is
   function Header_gen(network_size_x, source, destination, Mem_address: integer)return std_logic_vector;
   function Body_1_gen(Mem_address,OPCODE: integer; RW, DI, ROLE: std_logic) return std_logic_vector;
   function Body_2_gen(Packet_length, packet_id: integer ) return std_logic_vector ;
-
   function Body_gen(Data: integer) return std_logic_vector;
-
   function Tail_gen(Data: integer) return std_logic_vector;
 
   procedure credit_counter_control(signal clk: in std_logic;
@@ -304,7 +302,8 @@ package body TB_Package is
 
               write(LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(source_node) & " to: " & integer'image(destination_node) &
                                   " length: "& integer'image(P_length) & " actual length: "& integer'image(counter)  & " id: "& integer'image(packet_id) &
-                                  " MEM_address_1: "& integer'image(Mem_address_1) & " MEM_address_2: "& integer'image(Mem_address_2) & " RW: "& integer'image(RW) &" DI: "& integer'image(DI) &" ROLE: "& integer'image(ROLE) &" OPCODE: "& integer'image(OPCODE));
+                                  " MEM_address_1: "& integer'image(Mem_address_1) & " MEM_address_2: "& integer'image(Mem_address_2) & " RW: "& integer'image(RW) &
+                                  " DI: "& integer'image(DI) &" ROLE: "& integer'image(ROLE) &" OPCODE: "& integer'image(OPCODE));
               writeline(VEC_FILE, LINEVARIABLE);
                counter := 0;
             end if;

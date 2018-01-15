@@ -81,7 +81,7 @@ architecture logic of NI_vc is
   signal grant,grant_vc : std_logic;
   signal vc_select_in, vc_select_out: std_logic;
 
-  type STATE_TYPE IS (IDLE, HEADER_FLIT, BODY_FLIT_1, BODY_FLIT, TAIL_FLIT);
+  type STATE_TYPE IS (IDLE, HEADER_FLIT, BODY_FLIT_1, BODY_FLIT_2, BODY_FLIT, TAIL_FLIT);
   signal state, state_in   : STATE_TYPE := IDLE;
   signal FIFO_Data_out : std_logic_vector(31 downto 0);
   signal flag_register, flag_register_in : std_logic_vector(31 downto 0);
@@ -315,11 +315,11 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
                 end if;
 
             when HEADER_FLIT =>
-                    if FIFO_Data_out(14) = '1' then
+                    if FIFO_Data_out(21) = '1' then
                         if credit_counter_vc_out /= "00" and P2N_empty = '0' then
                           grant_vc<= '1';
                           vc_select_in <= '1';
-                          TX <= "001" & std_logic_vector(to_unsigned(current_y, 7)) & std_logic_vector(to_unsigned(current_x, 7)) & FIFO_Data_out(13 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 7)) & std_logic_vector(to_unsigned(current_x, 7)) & FIFO_Data_out(13 downto 0));
+                          TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
                           state_in <= BODY_FLIT_1;
                         else
                               state_in <= HEADER_FLIT;
@@ -328,34 +328,52 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
                         if credit_counter_out /= "00" and P2N_empty = '0' then
                           grant<= '1';
                           vc_select_in <= '0';
-                          TX <= "001" & std_logic_vector(to_unsigned(current_y, 7)) & std_logic_vector(to_unsigned(current_x, 7)) & FIFO_Data_out(13 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 7)) & std_logic_vector(to_unsigned(current_x, 7)) & FIFO_Data_out(13 downto 0));
+                          TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
                           state_in <= BODY_FLIT_1;
                         else
                               state_in <= HEADER_FLIT;
                         end if;
                     end if;
+
             when BODY_FLIT_1 =>
                   if vc_select_out = '0' then
                       if credit_counter_out /= "00" and P2N_empty = '0'then
-                        packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-2;
                         grant <= '1';
-                        TX <=  "010" &FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" &FIFO_Data_out(27 downto 14) &  packet_counter_out);
-                        state_in <= BODY_FLIT;
+                        TX <=  "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 0));
+                        state_in <= BODY_FLIT_2;
                       else
                         state_in <= BODY_FLIT_1;
                       end if;
                   else
                     if credit_counter_vc_out /= "00" and P2N_empty = '0'then
-                      packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-2;
                       grant_vc <= '1';
-                      TX <=  "010" &FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" &FIFO_Data_out(27 downto 14) &  packet_counter_out);
-                      state_in <= BODY_FLIT;
+                      TX <=  "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 0));
+                      state_in <= BODY_FLIT_2;
                     else
                       state_in <= BODY_FLIT_1;
                     end if;
                   end if;
 
-
+          when BODY_FLIT_2 =>
+                if vc_select_out = '0' then
+                    if credit_counter_out /= "00" and P2N_empty = '0'then
+                      packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-3;
+                      grant <= '1';
+                      TX <=  "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out);
+                      state_in <= BODY_FLIT;
+                    else
+                      state_in <= BODY_FLIT_2;
+                    end if;
+                else
+                  if credit_counter_vc_out /= "00" and P2N_empty = '0'then
+                    packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-3;
+                    grant_vc <= '1';
+                    TX <=  "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out);
+                    state_in <= BODY_FLIT;
+                  else
+                    state_in <= BODY_FLIT_2;
+                  end if;
+                end if;
 
             when BODY_FLIT =>
               if vc_select_out = '0' then

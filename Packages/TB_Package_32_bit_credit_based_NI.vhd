@@ -153,6 +153,7 @@ package body TB_Package is
           end if;
 
           if  (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "010") then  -- got body flit
+              --TODO:
               -- if receive_counter = 1 then
               --   -- retrive the first body info
               -- end if;

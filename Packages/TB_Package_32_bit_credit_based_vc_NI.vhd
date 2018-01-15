@@ -98,12 +98,14 @@ package body TB_Package is
     -- sending variables
     variable send_destination_node, send_counter, send_id_counter: integer:= 0;
     variable send_packet_length: integer:= 8;
-    type state_type is (Idle, Header_flit, Body_flit, Tail_flit);
+    type state_type is (Idle, Header_flit, Body_flit, Body_flit_1, Tail_flit);
     variable  state : state_type;
 
     variable  frame_starting_delay : integer:= 0;
     variable frame_counter: integer:= 0;
     variable first_packet : boolean := True;
+
+    variable Mem_address_1, Mem_address2, OPCODE: integer := 0;
 
     variable vc: integer := 0; -- virtual channel selector
     variable read_vc: integer := 0; -- virtual channel selector
@@ -150,15 +152,19 @@ package body TB_Package is
           wait until clk'event and clk ='0';
 
           if (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001") then -- got header flit
-              receive_destination_node_vc := to_integer(unsigned(data_read(14 downto 8)))* network_x+to_integer(unsigned(data_read(7 downto 1)));
-              receive_source_node_vc :=to_integer(unsigned(data_read(21 downto 15)))* network_x+to_integer(unsigned(data_read(21 downto 15)));
+              receive_destination_node := to_integer(unsigned(data_read(20 downto 17)))* network_x+to_integer(unsigned(data_read(16 downto 13)));
+              receive_source_node :=to_integer(unsigned(data_read(28 downto 25)))* network_x+to_integer(unsigned(data_read(24 downto 21)));
               receive_counter_vc := 1;
           end if;
 
           if  (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "010") then  -- got body flit
-              if receive_counter_vc = 1 then
-                  receive_packet_length_vc := to_integer(unsigned(data_read(28 downto 15)));
-                  receive_packet_id_vc := to_integer(unsigned(data_read(14 downto 1)));
+              --TODO:
+              -- if receive_counter = 1 then
+              --   -- retrive the first body info
+              -- end if;
+              if receive_counter = 2 then
+                  receive_packet_length := to_integer(unsigned(data_read(28 downto 15)));
+                  receive_packet_id := to_integer(unsigned(data_read(14 downto 1)));
               end if;
               receive_counter_vc := receive_counter_vc + 1;
 
@@ -179,13 +185,17 @@ package body TB_Package is
           wait until clk'event and clk ='0';
 
           if (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001") then -- got header flit
-              receive_destination_node := to_integer(unsigned(data_read(14 downto 8)))* network_x+to_integer(unsigned(data_read(7 downto 1)));
-              receive_source_node :=to_integer(unsigned(data_read(21 downto 15)))* network_x+to_integer(unsigned(data_read(21 downto 15)));
+              receive_destination_node := to_integer(unsigned(data_read(20 downto 17)))* network_x+to_integer(unsigned(data_read(16 downto 13)));
+              receive_source_node :=to_integer(unsigned(data_read(28 downto 25)))* network_x+to_integer(unsigned(data_read(24 downto 21)));
               receive_counter := 1;
           end if;
 
           if  (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "010") then  -- got body flit
-              if receive_counter = 1 then
+              --TODO:
+              -- if receive_counter = 1 then
+              --   -- retrive the first body info
+              -- end if;
+              if receive_counter = 2 then
                   receive_packet_length := to_integer(unsigned(data_read(28 downto 15)));
                   receive_packet_id := to_integer(unsigned(data_read(14 downto 1)));
               end if;
@@ -222,12 +232,12 @@ package body TB_Package is
                     if vc = 1 then
                       address <= reserved_address_vc;
                       write_byte_enable <= "1111";
-                      -- if you want to write into VC1 you should write "00000000000001" into the sender part! (since the NI sets the source address automatically, the source address field can be used for selecting VC)
-                      data_write <= "0000" &  "00000000000001" & std_logic_vector(to_unsigned(send_destination_node/network_x, 7)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 7));
+                      -- if you want to write into VC1 you should write "00000001" into the sender part! (since the NI sets the source address automatically, the source address field can be used for selecting VC)
+                      data_write <= "0000" &   "00000001" & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1 mod network_x, 12));
                     else
                       address <= reserved_address;
                       write_byte_enable <= "1111";
-                      data_write <= "0000" &  "00000000000000" & std_logic_vector(to_unsigned(send_destination_node/network_x, 7)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 7));
+                      data_write <= "0000" &  "00000000" & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1 mod network_x, 12));
                     end if;
                     write(SEND_LINEVARIABLE, "Packet generated at " & time'image(now) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) & " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " VC: " & integer'image(vc));
                     writeline(SEND_FILE, SEND_LINEVARIABLE);
@@ -253,13 +263,21 @@ package body TB_Package is
                   end if;
                   write_byte_enable <= "1111";
                   -- first body flit
-                  if first_packet = True then
-                    data_write <= "0000" &  std_logic_vector(to_unsigned(send_packet_length, 14)) & std_logic_vector(to_unsigned(send_id_counter, 14));
-                  else
-                    data_write <= "0000" &  std_logic_vector(to_unsigned(send_packet_length, 14)) & std_logic_vector(to_unsigned(send_id_counter, 14));
-                  end if;
+                  data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & "000" & std_logic_vector(to_unsigned(OPCODE, 5));
                   send_counter := send_counter+1;
-                  state :=  Body_flit;
+                  state :=  Body_flit_1;
+                elsif state = Body_flit_1 then
+                    -- the 2nd body flit
+                    address <= reserved_address;
+                    write_byte_enable <= "1111";
+                    uniform(seed1, seed2, rand);
+                    data_write <= "0000" &  std_logic_vector(to_unsigned(send_packet_length, 14)) & std_logic_vector(to_unsigned(send_id_counter, 14));
+                    send_counter := send_counter+1;
+                    if send_counter = send_packet_length-1 then
+                        state :=  Tail_flit;
+                    else
+                        state :=  Body_flit_1;
+                    end if;
               elsif state = Body_flit then
                   -- rest of body flits
                   if vc = 1 then

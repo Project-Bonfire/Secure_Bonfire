@@ -9,12 +9,11 @@ use IEEE.NUMERIC_STD.all;
  use ieee.std_logic_misc.all;
 
 package TB_Package is
-  function Header_gen(network_size_x, source, destination: integer ) return std_logic_vector ;
-
-  function Body_1_gen(Packet_length, packet_id: integer ) return std_logic_vector ;
-  function Body_gen(Data: integer ) return std_logic_vector ;
-
-  function Tail_gen(Packet_length, Data: integer ) return std_logic_vector ;
+  function Header_gen(network_size_x, source, destination, Mem_address: integer)return std_logic_vector;
+  function Body_1_gen(Mem_address,OPCODE: integer; RW, DI, ROLE: std_logic) return std_logic_vector;
+  function Body_2_gen(Packet_length, packet_id: integer ) return std_logic_vector ;
+  function Body_gen(Data: integer) return std_logic_vector;
+  function Tail_gen(Data: integer) return std_logic_vector;
 
   procedure credit_counter_control(signal clk: in std_logic;
                                  signal credit_in: in std_logic; signal valid_out: in std_logic;
@@ -35,34 +34,45 @@ package body TB_Package is
   constant Body_type : std_logic_vector := "010";
   constant Tail_type : std_logic_vector := "100";
 
-  function Header_gen(network_size_x, source, destination: integer)
+  function Header_gen(network_size_x, source, destination, Mem_address: integer)
               return std_logic_vector is
-    	variable Header_flit: std_logic_vector (31 downto 0);
+      variable Header_flit: std_logic_vector (31 downto 0);
       variable source_x, source_y, destination_x, destination_y: integer;
-    	begin
 
-        -- We only need network_size_x for calculation of X and Y coordinates of a node!
+      begin
+
+      -- We only need network_size_x for calculation of X and Y coordinates of a node!
       source_x      := source       mod  network_size_x;
       source_y      := source       /    network_size_x;
       destination_x := destination  mod  network_size_x;
       destination_y := destination  /    network_size_x;
-      Header_flit := Header_type &  std_logic_vector(to_unsigned(source_y,7)) & std_logic_vector(to_unsigned(source_x,7)) &
-                     std_logic_vector(to_unsigned(destination_y,7)) & std_logic_vector(to_unsigned(destination_x,7)) &
-                     XOR_REDUCE(Header_type &  std_logic_vector(to_unsigned(source_y,7)) & std_logic_vector(to_unsigned(source_x,7)) &
-                     std_logic_vector(to_unsigned(destination_y,7)) & std_logic_vector(to_unsigned(destination_x,7)));
+
+      Header_flit := Header_type &  std_logic_vector(to_unsigned(source_y,4)) & std_logic_vector(to_unsigned(source_x,4)) &
+                     std_logic_vector(to_unsigned(destination_y,4)) & std_logic_vector(to_unsigned(destination_x,4)) & std_logic_vector(to_unsigned(Mem_address,12)) &
+                     XOR_REDUCE(Header_type &  std_logic_vector(to_unsigned(source_y,4)) & std_logic_vector(to_unsigned(source_x,4)) &
+                     std_logic_vector(to_unsigned(destination_y,4)) & std_logic_vector(to_unsigned(destination_x,4)) & std_logic_vector(to_unsigned(Mem_address,12)));
 
     return Header_flit;
   end Header_gen;
 
-  function Body_1_gen(Packet_length, packet_id: integer)
+  function Body_1_gen(Mem_address,OPCODE: integer;
+                       RW, DI, ROLE: std_logic)
+                return std_logic_vector is
+    variable Body_flit: std_logic_vector (31 downto 0);
+    begin
+    Body_flit := Body_type &  std_logic_vector(to_unsigned(Mem_address, 20))&  RW & DI & ROLE & std_logic_vector(to_unsigned(OPCODE, 5))&
+                 XOR_REDUCE(Body_type &  std_logic_vector(to_unsigned(Mem_address, 20))&  RW & DI & ROLE & std_logic_vector(to_unsigned(OPCODE, 5)));
+    return Body_flit;
+  end Body_1_gen;
+
+  function Body_2_gen(Packet_length, packet_id: integer)
                 return std_logic_vector is
     variable Body_flit: std_logic_vector (31 downto 0);
     begin
     Body_flit := Body_type &  std_logic_vector(to_unsigned(Packet_length, 14))&  std_logic_vector(to_unsigned(packet_id, 14)) &
                  XOR_REDUCE(Body_type &  std_logic_vector(to_unsigned(Packet_length, 14))&  std_logic_vector(to_unsigned(packet_id, 14)));
     return Body_flit;
-  end Body_1_gen;
-
+  end Body_2_gen;
 
   function Body_gen(Data: integer)
                 return std_logic_vector is
@@ -73,7 +83,7 @@ package body TB_Package is
   end Body_gen;
 
 
-  function Tail_gen(Packet_length, Data: integer)
+  function Tail_gen(Data: integer)
                 return std_logic_vector is
     variable Tail_flit: std_logic_vector (31 downto 0);
     begin
@@ -117,6 +127,7 @@ package body TB_Package is
     variable rand : real ;
     variable destination_id: integer;
     variable id_counter, frame_starting_delay, Packet_length, frame_ending_delay : integer:= 0;
+    variable Mem_address1, Mem_address2, OPCODE: integer := 0;
     variable credit_counter: std_logic_vector (1 downto 0);
     variable vc: integer:= 0;
     begin
@@ -194,7 +205,7 @@ package body TB_Package is
 
       writeline(VEC_FILE, LINEVARIABLE);
       wait until clk'event and clk ='0'; -- On negative edge of clk (for syncing purposes)
-      port_in <= Header_gen(network_size_x, source, destination_id); -- Generating the header flit of the packet (All packets have a header flit)!
+      port_in <= Header_gen(network_size_x, source, destination_id,Mem_address1); -- Generating the header flit of the packet (All packets have a header flit)!
 
       if vc = 0 then
         valid_out <= '1';
@@ -227,7 +238,9 @@ package body TB_Package is
             uniform(seed1, seed2, rand);
             -- Each packet can have no body flits or one or more than body flits.
             if I = 0 then
-              port_in <= Body_1_gen(Packet_length, id_counter);
+              port_in <= Body_1_gen(Mem_address2,OPCODE, '0', '0', '0');
+            elsif I = 1 then
+              port_in <= Body_2_gen(Packet_length, id_counter);
             else
               port_in <= Body_gen(integer(rand*1000.0));
             end if;
@@ -259,7 +272,7 @@ package body TB_Package is
 
       uniform(seed1, seed2, rand);
       -- Close the packet with a tail flit (All packets have one tail flit)!
-      port_in <= Tail_gen(Packet_length, integer(rand*1000.0));
+      port_in <= Tail_gen(integer(rand*1000.0));
       if vc = 0 then
         valid_out <= '1';
       else
@@ -291,9 +304,16 @@ package body TB_Package is
                        signal credit_out_vc: out std_logic; signal valid_in_vc: in std_logic;
                        signal port_in: in std_logic_vector) is
   -- initial_delay: waits for this number of clock cycles before sending the packet!
-    variable source_node_x_vc, source_node_y_vc, destination_node_x_vc, destination_node_y_vc: integer;
-    variable source_node_x, source_node_y, destination_node_x, destination_node_y, source_node, destination_node, P_length, packet_id, counter: integer;
-    variable source_node_vc, destination_node_vc, P_length_vc, packet_id_vc, counter_vc: integer;
+    variable source_node_x_vc, source_node_y_vc, destination_node_x_vc, destination_node_y_vc, Mem_address_1_vc, source_node_vc, destination_node_vc: integer;
+    variable Mem_address_2_vc, RW_vc, DI_vc, ROLE_vc, OPCODE_vc: integer; -- Everything in Body 1
+    variable  P_length_vc, packet_id_vc: integer; -- everything in Body 2
+    variable  counter_vc: integer;
+
+    variable source_node_x, source_node_y, destination_node_x, destination_node_y, source_node, destination_node, Mem_address_1:  integer; -- everything in header
+    variable Mem_address_2, RW, DI, ROLE, OPCODE: integer; -- Everything in Body 1
+    variable P_length, packet_id: integer; -- everything in Body 2
+    variable counter: integer;
+
     variable LINEVARIABLE : line;
      file VEC_FILE : text is out "received.txt";
 
@@ -311,11 +331,11 @@ package body TB_Package is
          if valid_in = '1'  then
               if (port_in(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001") then
                 counter := 1;
-                source_node_y := to_integer(unsigned(port_in(28 downto 22)));
-            source_node_x := to_integer(unsigned(port_in(21 downto 15)));
-            destination_node_y := to_integer(unsigned(port_in(14 downto 8)));
-            destination_node_x := to_integer(unsigned(port_in(7 downto 1)));
-
+            source_node_y      := to_integer(unsigned(port_in(28 downto 25)));
+            source_node_x      := to_integer(unsigned(port_in(24 downto 21)));
+            destination_node_y := to_integer(unsigned(port_in(20 downto 17)));
+            destination_node_x := to_integer(unsigned(port_in(16 downto 13)));
+            Mem_address_1 := to_integer(unsigned(port_in(12 downto 1)));
             -- We only needs network_size_x for computing the node ID (convert from (X,Y) coordinate to Node ID)!
             source_node := (source_node_y * network_size_x) + source_node_x;
             destination_node := (destination_node_y * network_size_x) + destination_node_x;
@@ -323,17 +343,35 @@ package body TB_Package is
 
             end if;
             if  (port_in(DATA_WIDTH-1 downto DATA_WIDTH-3) = "010")   then
-               if counter = 1 then
-                  P_length := to_integer(unsigned(port_in(28 downto 15)));
-                  packet_id := to_integer(unsigned(port_in(15 downto 1)));
-               end if;
+              if counter = 1 then
+                 Mem_address_2 := to_integer(unsigned(port_in(28 downto 9)));
+                 OPCODE := to_integer(unsigned(port_in(5 downto 1)));
+                 RW := 0;
+                 DI := 0;
+                 ROLE := 0;
+                 if port_in(8) = '1' then
+                   RW := 1;
+                 end if;
+                 if port_in(7) = '1' then
+                   DI := 1;
+                 end if;
+                 if port_in(6) = '1' then
+                   ROLE := 1;
+                 end if;
+              elsif counter = 2 then
+                 P_length := to_integer(unsigned(port_in(28 downto 15)));
+                 packet_id := to_integer(unsigned(port_in(15 downto 1)));
+              end if;
                counter := counter+1;
 
             end if;
             if (port_in(DATA_WIDTH-1 downto DATA_WIDTH-3) = "100") then
                   counter := counter+1;
                   report "Node: " & integer'image(Node_ID) & "    Packet received at " & time'image(now) & " From " & integer'image(source_node) & " to " & integer'image(destination_node) & " with length: "& integer'image(P_length) & " counter: "& integer'image(counter) & " vc: 0";
-                  write(LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(source_node) & " to: " & integer'image(destination_node) & " length: "& integer'image(P_length) & " actual length: "& integer'image(counter)  & " id: "& integer'image(packet_id)& " vc: 0");
+                  write(LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(source_node) & " to: " & integer'image(destination_node) &
+                                  " length: "& integer'image(P_length) & " actual length: "& integer'image(counter)  & " id: "& integer'image(packet_id) &
+                                  " MEM_address_1: "& integer'image(Mem_address_1) & " MEM_address_2: "& integer'image(Mem_address_2) & " RW: "& integer'image(RW) &
+                                  " DI: "& integer'image(DI) &" ROLE: "& integer'image(ROLE) &" OPCODE: "& integer'image(OPCODE));
                   writeline(VEC_FILE, LINEVARIABLE);
                   assert (P_length=counter) report "wrong packet size" severity warning;
                   assert (Node_ID=destination_node) report "wrong packet destination " severity failure;
@@ -344,30 +382,50 @@ package body TB_Package is
           elsif valid_in_vc = '1'  then
                  if (port_in(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001") then
                    counter_vc := 1;
-                   source_node_y_vc := to_integer(unsigned(port_in(28 downto 22)));
-                   source_node_x_vc := to_integer(unsigned(port_in(21 downto 15)));
-                   destination_node_y_vc := to_integer(unsigned(port_in(14 downto 8)));
-                   destination_node_x_vc := to_integer(unsigned(port_in(7 downto 1)));
+                   source_node_y_vc      := to_integer(unsigned(port_in(28 downto 25)));
+                   source_node_x_vc      := to_integer(unsigned(port_in(24 downto 21)));
+                   destination_node_y_vc := to_integer(unsigned(port_in(20 downto 17)));
+                   destination_node_x_vc := to_integer(unsigned(port_in(16 downto 13)));
+                   Mem_address_1_vc := to_integer(unsigned(port_in(12 downto 1)));
                    -- We only needs network_size_x for computing the node ID (convert from (X,Y) coordinate to Node ID)!
                    source_node_vc := (source_node_y_vc * network_size_x) + source_node_x_vc;
                    destination_node_vc := (destination_node_y_vc * network_size_x) + destination_node_x_vc;
 
                end if;
                if  (port_in(DATA_WIDTH-1 downto DATA_WIDTH-3) = "010")   then
-                  if counter_vc = 1 then
+                 if counter_vc = 1 then
+                       Mem_address_2_vc := to_integer(unsigned(port_in(28 downto 9)));
+                       OPCODE_vc := to_integer(unsigned(port_in(5 downto 1)));
+                       RW_vc := 0;
+                       DI_vc := 0;
+                       ROLE_vc := 0;
+                       if port_in(8) = '1' then
+                         RW_vc := 1;
+                       end if;
+                       if port_in(7) = '1' then
+                         DI_vc := 1;
+                       end if;
+                       if port_in(6) = '1' then
+                         ROLE_vc := 1;
+                       end if;
+                  elsif counter_vc = 2 then
                      P_length_vc := to_integer(unsigned(port_in(28 downto 15)));
                      packet_id_vc := to_integer(unsigned(port_in(15 downto 1)));
                   end if;
+
                   counter_vc := counter_vc+1;
 
                end if;
                if (port_in(DATA_WIDTH-1 downto DATA_WIDTH-3) = "100") then
                    counter_vc := counter_vc+1;
                      report "Node: " & integer'image(Node_ID) & "    Packet received at " & time'image(now) & " From " & integer'image(source_node_vc) & " to " & integer'image(destination_node_vc) & " with length: "& integer'image(P_length_vc) & " counter: "& integer'image(counter_vc) & " vc: 1";
-                     write(LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(source_node_vc) & " to: " & integer'image(destination_node_vc) & " length: "& integer'image(P_length_vc) & " actual length: "& integer'image(counter_vc)  & " id: "& integer'image(packet_id_vc)& " vc: 1");
-                     writeline(VEC_FILE, LINEVARIABLE);
-                 assert (P_length=counter_vc) report "wrong packet size" severity warning;
-                 assert (Node_ID=destination_node_vc) report "wrong packet destination " severity failure;
+                     write(LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(source_node_vc) & " to: " & integer'image(destination_node_vc) &
+                                                       " length: "& integer'image(P_length_vc) & " actual length: "& integer'image(counter_vc)  & " id: "& integer'image(packet_id_vc) &
+                                                       " MEM_address_1: "& integer'image(Mem_address_1_vc) & " MEM_address_2: "& integer'image(Mem_address_2_vc) & " RW: "& integer'image(RW_Vc) &
+                                                       " DI: "& integer'image(DI_vc) &" ROLE: "& integer'image(ROLE_Vc) &" OPCODE: "& integer'image(OPCODE_vc));
+                    writeline(VEC_FILE, LINEVARIABLE);
+                   assert (P_length=counter_vc) report "wrong packet size" severity warning;
+                   assert (Node_ID=destination_node_vc) report "wrong packet destination " severity failure;
                   counter_vc := 0;
                end if;
          end if;
