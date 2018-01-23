@@ -268,6 +268,7 @@ process(P2N_empty, state, credit_counter_out, packet_length_counter_out, packet_
             when HEADER_FLIT =>
                 if credit_counter_out /= "00" and P2N_empty = '0' then
                     grant <= '1';
+                    --FIFO_Data_out(19 downto 0) contains the following: Destination Y- 4 bits, Destination X-4 bits, Mem_address_1 12bit
                     TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
                     state_in <= BODY_FLIT_1;
                 else
@@ -286,6 +287,8 @@ process(P2N_empty, state, credit_counter_out, packet_length_counter_out, packet_
                   if credit_counter_out /= "00" and P2N_empty = '0'then
                     packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-3;
                     grant <= '1';
+                    -- FIFO_Data_out(27 downto 14) contains the packet length
+                    -- FIFO_Data_out(13 downto 0) is used for passing the packet_counter_out from PE and we can compare here! or reuse it for other purpose
                     TX <=  "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out);
                     state_in <= BODY_FLIT;
                   else

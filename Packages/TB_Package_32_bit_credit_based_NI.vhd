@@ -33,6 +33,8 @@ package body TB_Package is
   constant Header_type : std_logic_vector := "001";
   constant Body_type : std_logic_vector := "010";
   constant Tail_type : std_logic_vector := "100";
+  constant MaxMemoryAddress1 : integer := 4095; -- should fit in 12 bits (smaller than 4096)
+  constant MaxMemoryAddress2 : integer := 1048575; -- should fit in 20 bits (smaller than 1048576)
 
   function CX_GEN(current_address, network_x, network_y: integer) return integer is
     variable X, Y : integer := 0;
@@ -94,14 +96,14 @@ package body TB_Package is
     -- sending variables
     variable send_destination_node, send_counter, send_id_counter: integer:= 0;
     variable send_packet_length: integer:= 8;
-    variable Mem_address_1, Mem_address2, OPCODE: integer := 0;
+    variable Mem_address_1, Mem_address2, RW, DI, ROLE, OPCODE: integer := 0;
     type state_type is (Idle, Header_flit, Body_flit, Body_flit_1, Tail_flit);
     variable  state : state_type;
 
     variable  frame_starting_delay : integer:= 0;
     variable frame_counter: integer:= 0;
     variable first_packet : boolean := True;
-
+    variable packet_gen_time: time;
     begin
 
     file_open(RECEIVED_FILE,"received.txt",WRITE_MODE);
@@ -195,12 +197,14 @@ package body TB_Package is
                     if (send_packet_length > max_packet_size) then
                         send_packet_length:=max_packet_size;
                     end if;
+                    uniform(seed1, seed2, rand);
+                    Mem_address_1:= integer(rand*real(MaxMemoryAddress1));
                     -- this is the header flit
                     address <= reserved_address;
                     write_byte_enable <= "1111";
-                    data_write <= "0000" &  std_logic_vector(to_unsigned(current_address/network_x, 4)) & std_logic_vector(to_unsigned(current_address mod network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1 mod network_x, 12));
-                    write(SEND_LINEVARIABLE, "Packet generated at " & time'image(now) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) & " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1));
-                    writeline(SEND_FILE, SEND_LINEVARIABLE);
+                    packet_gen_time :=  now;
+                    data_write <= "0000" &  std_logic_vector(to_unsigned(current_address/network_x, 4)) & std_logic_vector(to_unsigned(current_address mod network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1, 12));
+
                   else
                     state :=  Idle;
                   end if;
@@ -209,7 +213,28 @@ package body TB_Package is
                   address <= reserved_address;
                   write_byte_enable <= "1111";
                   -- this is body 1
-                  data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & "000" & std_logic_vector(to_unsigned(OPCODE, 5));
+                  uniform(seed1, seed2, rand);
+                  RW := integer(rand*real(2));
+                  if RW > 1 then
+                    RW := 1;
+                  end if;
+                  uniform(seed1, seed2, rand);
+                  DI := integer(rand*real(2));
+                  if DI > 1 then
+                    DI := 1;
+                  end if;
+                  uniform(seed1, seed2, rand);
+                  ROLE := integer(rand*real(2));
+                  if ROLE > 1 then
+                    ROLE := 1;
+                  end if;
+                  uniform(seed1, seed2, rand);
+                  Mem_address2 := integer(rand*real(MaxMemoryAddress2));
+                  data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
+                  write(SEND_LINEVARIABLE, "Packet generated at " & time'image(packet_gen_time) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) &
+                        " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1)&
+                        " Mem_address_2: " & integer'image(Mem_address2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
+                  writeline(SEND_FILE, SEND_LINEVARIABLE);
                   send_counter := send_counter+1;
                   state :=  Body_flit_1;
 
