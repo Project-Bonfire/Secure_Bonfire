@@ -15,8 +15,9 @@ def instantiate_routers(noc_file, network_dime_x, network_dime_y, vc):
 
         noc_file.write("R_"+str(i)+": router_credit_based generic map (DATA_WIDTH  => DATA_WIDTH, ")
 
+        # Uses West-First routing
         noc_file.write("current_address=>"+str(i)+", " +
-                       "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 60, NoC_size_x => "+str(network_dime_x)+")\n")
+                       "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 215, NoC_size_x => "+str(network_dime_x)+")\n")
         noc_file.write("PORT MAP (reset, clk, \n")
         noc_file.write("\tRX_N_"+str(i)+", RX_E_"+str(i)+", RX_W_"+str(i)+", RX_S_"+str(i)+", RX_L_"+str(i)+",\n")
         noc_file.write("\tcredit_in_N_"+str(i)+", credit_in_E_"+str(i)+", credit_in_W_"+str(i) +
