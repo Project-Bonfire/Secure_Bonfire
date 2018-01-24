@@ -274,6 +274,7 @@ if add_NI:
       else:
         noc_file.write("NI_" + str(node_number) + ": NI \n")
       noc_file.write("   generic map(current_x => " + str(node_number%network_dime_x) + ", current_y => " + str(node_number/network_dime_x) + ",\n")
+      noc_file.write("               network_x => " + str(network_dime_x) + ",\n")
       noc_file.write("               NI_depth => " + str(NI_depth) + ",\n")
       noc_file.write("               NI_couter_size => " + str(int(ceil(log(NI_depth)/log(2)))) + "\n")
       noc_file.write("           ) \n")

@@ -87,10 +87,8 @@ package body TB_Package is
     variable SEND_LINEVARIABLE : line;
     file SEND_FILE : text;
 
-    variable RECEIVED_LINEVARIABLE : line;
-    file RECEIVED_FILE : text;
-    -- receiving variables
-    variable receive_source_node, receive_destination_node, receive_packet_id, receive_counter, receive_packet_length: integer;
+
+    
 
 
     -- sending variables
@@ -106,7 +104,7 @@ package body TB_Package is
     variable packet_gen_time: time;
     begin
 
-    file_open(RECEIVED_FILE,"received.txt",WRITE_MODE);
+
     file_open(SEND_FILE,"sent.txt",WRITE_MODE);
 
     enable <= '1';
@@ -147,31 +145,6 @@ package body TB_Package is
           address <= reserved_address;
           write_byte_enable <= "0000";
           wait until clk'event and clk ='0';
-
-          if (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001") then -- got header flit
-              receive_destination_node := to_integer(unsigned(data_read(20 downto 17)))* network_x+to_integer(unsigned(data_read(16 downto 13)));
-              receive_source_node :=to_integer(unsigned(data_read(28 downto 25)))* network_x+to_integer(unsigned(data_read(24 downto 21)));
-              receive_counter := 1;
-          end if;
-
-          if  (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "010") then  -- got body flit
-              --TODO:
-              -- if receive_counter = 1 then
-              --   -- retrive the first body info
-              -- end if;
-              if receive_counter = 2 then
-                  receive_packet_length := to_integer(unsigned(data_read(28 downto 15)));
-                  receive_packet_id := to_integer(unsigned(data_read(14 downto 1)));
-              end if;
-              receive_counter := receive_counter+1;
-
-          end if;
-
-          if (data_read(DATA_WIDTH-1 downto DATA_WIDTH-3) = "100") then -- got tail flit
-              receive_counter := receive_counter+1;
-                write(RECEIVED_LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(receive_source_node) & " to: " & integer'image(receive_destination_node) & " length: "& integer'image(receive_packet_length) & " actual length: "& integer'image(receive_counter)  & " id: "& integer'image(receive_packet_id));
-                writeline(RECEIVED_FILE, RECEIVED_LINEVARIABLE);
-          end if;
 
       elsif data_read(30) = '0' then -- P2N is not full, can send flit
           if frame_counter >= frame_starting_delay  then
@@ -296,7 +269,6 @@ package body TB_Package is
 
     end loop;
     file_close(SEND_FILE);
-    file_close(RECEIVED_FILE);
   end NI_control;
 
 

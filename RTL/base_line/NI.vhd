@@ -23,6 +23,7 @@ use ieee.std_logic_misc.all;
 entity NI is
    generic(current_x : integer := 10; 	-- the current node's x
            current_y : integer := 10; 	-- the current node's y
+           network_x : integer := 4 ;
            NI_depth : integer := 32;
            NI_couter_size: integer:= 5; -- should be set to log2 of NI_depth
            reserved_address : std_logic_vector(29 downto 0) := "000000000000000001111111111111"; -- NI's memory mapped reserved
@@ -86,12 +87,25 @@ architecture logic of NI is
 
   signal N2P_Data_out : std_logic_vector(31 downto 0);
 
+
   signal N2P_FIFO_read_pointer, N2P_FIFO_read_pointer_in: std_logic_vector(NI_couter_size-1 downto 0);
   signal N2P_FIFO_write_pointer, N2P_FIFO_write_pointer_in: std_logic_vector(NI_couter_size-1 downto 0);
 
   signal N2P_full, N2P_empty: std_logic;
   signal N2P_read_en, N2P_read_en_in, N2P_write_en: std_logic;
   signal counter_register_in, counter_register : std_logic_vector(1 downto 0);
+
+  -- this is for depacketizer section
+  type depacketizer_state_type is (Header, Body_1, Body_2, other_body, IDLE_input);
+  signal depack_read, proc_read : std_logic;
+  signal depack_state, depack_state_in : depacketizer_state_type;
+  signal Rec_Valid, Rec_Valid_in  : std_logic;
+  signal Rec_MEM_Address, Rec_MEM_Address_in                  : std_logic_vector(31 downto 0);
+  signal Rec_RightsAndOpCode, Rec_RightsAndOpCode_in          : std_logic_vector(7 downto 0);
+  signal Rec_Source_Address,  Rec_Source_Address_in           : std_logic_vector(7 downto 0);
+  signal Rec_Destination_Address, Rec_Destination_Address_in  : std_logic_vector(7 downto 0);
+  signal Rec_Packet_ID, Rec_Packet_ID_in                      : std_logic_vector(13 downto 0);
+  signal Rec_Packet_Lenght, Rec_Packet_Lenght_in              : std_logic_vector(13 downto 0);
 
 begin
 
@@ -119,7 +133,15 @@ process(clk, enable, write_byte_enable) begin
       N2P_read_en <= '0';
       flag_register <= (others =>'0');
       old_address <= (others =>'0');
-
+      -------------------------------
+      Rec_Valid <= '0';
+      Rec_MEM_Address <= (others =>'0');
+      Rec_RightsAndOpCode <= (others =>'0');
+      Rec_Source_Address <= (others =>'0');
+      Rec_Destination_Address <= (others =>'0');
+      Rec_Packet_ID <= (others =>'0');
+      Rec_Packet_Lenght <= (others =>'0');
+      depack_state <= IDLE_input;
    elsif clk'event and clk = '1'  then
       old_address <= address;
       P2N_FIFO_write_pointer <= P2N_FIFO_write_pointer_in;
@@ -150,7 +172,15 @@ process(clk, enable, write_byte_enable) begin
         credit_out <= '1';
       end if;
       flag_register <= flag_register_in;
-
+      -------------------------------
+      Rec_Valid <= Rec_Valid_IN;
+      Rec_MEM_Address <= Rec_MEM_Address_IN;
+      Rec_RightsAndOpCode <= Rec_RightsAndOpCode_in;
+      Rec_Source_Address <= Rec_Source_Address_in;
+      Rec_Destination_Address <= Rec_Destination_Address_in;
+      Rec_Packet_ID <= Rec_Packet_ID_in;
+      Rec_Packet_Lenght <= Rec_Packet_Lenght_in;
+      depack_state <= depack_state_in;
    end if;
 end process;
 
@@ -337,13 +367,22 @@ valid_out <= grant;
   N2P_Data_out <= N2P_FIFO(to_integer(unsigned(N2P_FIFO_read_pointer)));
 
 
-  process(address, write_byte_enable, N2P_empty)begin
-    if address = reserved_address and write_byte_enable = "0000" and N2P_empty = '0' then
+  process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
+    if (address = reserved_address and write_byte_enable = "0000" and Rec_Valid = '1' and N2P_empty = '0') then
+      proc_read <= '1';
+    else
+      proc_read <= '0';
+    end if;
+  end process;
+
+
+  process (proc_read, depack_read, N2P_empty) begin
+    if (proc_read = '1' or depack_read = '1') and N2P_empty = '0' then
       N2P_read_en_in <= '1';
     else
       N2P_read_en_in <= '0';
     end if;
-  end process;
+end process;
 
 
   process(N2P_write_en, N2P_FIFO_write_pointer)begin
@@ -409,7 +448,78 @@ process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begin
   end if;
 end process;
 
-flag_register_in <= N2P_empty & P2N_full & "000000000000000000000000000000";
+process(N2P_Data_out, depack_state, N2P_empty, depack_state, Rec_Source_Address,
+        Rec_Destination_Address, Rec_MEM_Address, Rec_RightsAndOpCode,
+        Rec_Packet_Lenght, Rec_Packet_ID, N2P_read_en)
+
+        -- receiving variables
+        variable receive_source_node, receive_destination_node, receive_packet_id, receive_counter, receive_packet_length: integer;
+        variable RECEIVED_LINEVARIABLE : line;
+        file RECEIVED_FILE : text;
+
+  begin
+
+  file_open(RECEIVED_FILE,"received.txt",APPEND_MODE);
+  -- default states
+  depack_state_in            <=  depack_state;
+  Rec_Source_Address_in      <=  Rec_Source_Address;
+  Rec_Destination_Address_in <= Rec_Destination_Address;
+  Rec_MEM_Address_in         <= Rec_MEM_Address;
+  Rec_RightsAndOpCode_in     <= Rec_RightsAndOpCode;
+  Rec_Packet_Lenght_in       <= Rec_Packet_Lenght;
+  Rec_Packet_ID_in           <= Rec_Packet_ID;
+  depack_read <= '0';
+  Rec_Valid_in<= Rec_Valid;
+  -------------------------------------------------
+  case depack_state is
+    when IDLE_input =>
+        if N2P_Data_out(31 downto 29) = "001" and N2P_empty = '0'  then
+            depack_state_in <= Header;
+            depack_read <= '1';
+        end if;
+    when Header =>
+        if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
+            depack_state_in <= Body_1;
+            Rec_Source_Address_in <= N2P_Data_out(28 downto 21);
+            Rec_Destination_Address_in <=  N2P_Data_out(20 downto 13);
+            Rec_MEM_Address_in(11 downto 0) <=  N2P_Data_out(12 downto 1);
+            receive_source_node := to_integer(unsigned(N2P_Data_out(28 downto 25)))* network_x+to_integer(unsigned(N2P_Data_out(24 downto 21)));
+            receive_destination_node :=to_integer(unsigned(N2P_Data_out(20 downto 17)))* network_x+to_integer(unsigned(N2P_Data_out(16 downto 13)));
+            depack_read <= '1';
+        end if;
+    when Body_1 =>
+        if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
+          depack_state_in <= Body_2;
+          Rec_MEM_Address_in(31 downto 12) <=  N2P_Data_out(28 downto 9);
+          Rec_RightsAndOpCode_in <=  N2P_Data_out(8 downto 1);
+          depack_read <= '1';
+        end if;
+    when Body_2 =>
+      if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0' then
+        depack_state_in <= other_body;
+        Rec_Packet_Lenght_in <=  N2P_Data_out(28 downto 15);
+        Rec_Packet_ID_in <=  N2P_Data_out(14 downto 1);
+
+        receive_packet_length := to_integer(unsigned(N2P_Data_out(28 downto 15)));
+        receive_packet_id := to_integer(unsigned(N2P_Data_out(14 downto 1)));
+        Rec_Valid_in <= '1';
+      end if;
+    when other_body =>
+        -- here we have only payload!
+        if N2P_Data_out(31 downto 29) = "100" and N2P_empty = '0' and N2P_read_en = '1'  then
+          depack_state_in <= IDLE_input;
+          Rec_Valid_in <= '0';
+
+          write(RECEIVED_LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(receive_source_node) &
+                                       " to: " & integer'image(receive_destination_node) & " length: "& integer'image(receive_packet_length) &
+                                       " actual length: "& integer'image(0) &  " id: "& integer'image(receive_packet_id));
+          writeline(RECEIVED_FILE, RECEIVED_LINEVARIABLE);
+        end if;
+    end case;
+file_close(RECEIVED_FILE);
+end process;
+
+flag_register_in <= (not(Rec_Valid and not N2P_empty)) & P2N_full & "000000000000000000000000000000";
 
 irq_out <= '0';
 end; --architecture logic
