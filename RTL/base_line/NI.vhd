@@ -109,7 +109,7 @@ architecture logic of NI is
 
 begin
 
-process(clk, enable, write_byte_enable) begin
+Clk_proc: process(clk, enable, write_byte_enable) begin
    if reset = '1' then
       storage <= (others => '0');
       valid_data <= '0';
@@ -183,18 +183,14 @@ process(clk, enable, write_byte_enable) begin
       depack_state <= depack_state_in;
    end if;
 end process;
-
+---------------------------------------------------------------------------------------
 -- everything bellow this line is pure combinatorial!
 
----------------------------------------------------------------------------------------
+------------------------------------------------------
 --below this is code for communication from PE 2 NoC
-
-
-
-process(write_byte_enable, enable, address, storage, data_write, valid_data, P2N_write_en) begin
+P2N_wr_byte_en: process(write_byte_enable, enable, address, storage, data_write, valid_data, P2N_write_en) begin
    storage_in <= storage ;
    valid_data_in <= valid_data;
-
    -- If PE wants to send data to NoC via NI (data is valid)
    if enable = '1' and address = reserved_address then
       if write_byte_enable /= "0000" then
@@ -220,16 +216,16 @@ process(write_byte_enable, enable, address, storage, data_write, valid_data, P2N
 
 end process;
 
-    process(storage, P2N_FIFO_write_pointer, P2N_FIFO) begin
-        P2N_FIFO_in <= P2N_FIFO;
-        P2N_FIFO_in(to_integer(unsigned(P2N_FIFO_write_pointer))) <= storage;
-    end process;
+P2N_FIFO_wr:process(storage, P2N_FIFO_write_pointer, P2N_FIFO) begin
+    P2N_FIFO_in <= P2N_FIFO;
+    P2N_FIFO_in(to_integer(unsigned(P2N_FIFO_write_pointer))) <= storage;
+end process;
 
-    FIFO_Data_out <= P2N_FIFO(to_integer(unsigned(P2N_FIFO_read_pointer)));
+FIFO_Data_out <= P2N_FIFO(to_integer(unsigned(P2N_FIFO_read_pointer)));
 
 
 -- Write pointer update process (after each write operation, write pointer is rotated one bit to the left)
-process(P2N_write_en, P2N_FIFO_write_pointer)begin
+ P2N_wr_pointer:process(P2N_write_en, P2N_FIFO_write_pointer)begin
     if P2N_write_en = '1' then
        P2N_FIFO_write_pointer_in <= P2N_FIFO_write_pointer +1 ;
     else
@@ -238,14 +234,14 @@ process(P2N_write_en, P2N_FIFO_write_pointer)begin
   end process;
 
 -- Read pointer update process (after each read operation, read pointer is rotated one bit to the left)
- process(P2N_FIFO_read_pointer, grant)begin
-  P2N_FIFO_read_pointer_in <=  P2N_FIFO_read_pointer;
-  if grant  = '1' then
-    P2N_FIFO_read_pointer_in <= P2N_FIFO_read_pointer +1;
-  end if;
+P2N_rd_pointer:process(P2N_FIFO_read_pointer, grant)begin
+    P2N_FIFO_read_pointer_in <=  P2N_FIFO_read_pointer;
+    if grant  = '1' then
+      P2N_FIFO_read_pointer_in <= P2N_FIFO_read_pointer +1;
+    end if;
 end process;
 
-process(P2N_full, valid_data) begin
+P2N_wr_enable:process(P2N_full, valid_data) begin
      if valid_data = '1' and P2N_full ='0' then
          P2N_write_en <= '1';
      else
@@ -254,7 +250,7 @@ process(P2N_full, valid_data) begin
   end process;
 
 -- Process for updating full and empty signals
-process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
+P2N_Full_Empty:process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
       P2N_empty <= '0';
       P2N_full <= '0';
       if P2N_FIFO_read_pointer = P2N_FIFO_write_pointer  then
@@ -263,9 +259,9 @@ process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
       if P2N_FIFO_write_pointer = P2N_FIFO_read_pointer - 1 then
               P2N_full <= '1';
       end if;
-  end process;
+end process;
 
-process (credit_in, credit_counter_out, grant)begin
+credit_counter_update: process (credit_in, credit_counter_out, grant)begin
     credit_counter_in <= credit_counter_out;
     if credit_in = '1' and grant = '1' then
          credit_counter_in <= credit_counter_out;
@@ -278,8 +274,7 @@ end process;
 
 
 
-process(P2N_empty, state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)
-
+Packetizer:process(P2N_empty, state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)
     begin
         -- Some initializations
         TX <= (others => '0');
@@ -356,99 +351,98 @@ process(P2N_empty, state, credit_counter_out, packet_length_counter_out, packet_
 
 end procesS;
 
+------------------------------------------------------
+--below this is code for communication from NoC 2 PE
 valid_out <= grant;
+N2P_Data_out <= N2P_FIFO(to_integer(unsigned(N2P_FIFO_read_pointer)));
 
-
-  process(RX, N2P_FIFO_write_pointer, N2P_FIFO) begin
+N2P_FIFO_wr:  process(RX, N2P_FIFO_write_pointer, N2P_FIFO) begin
       N2P_FIFO_in <= N2P_FIFO;
       N2P_FIFO_in(to_integer(unsigned(N2P_FIFO_write_pointer))) <= RX;
-  end process;
+end process;
 
-  N2P_Data_out <= N2P_FIFO(to_integer(unsigned(N2P_FIFO_read_pointer)));
-
-
-  process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
-    if (address = reserved_address and write_byte_enable = "0000" and Rec_Valid = '1' and N2P_empty = '0') then
-      proc_read <= '1';
-    else
-      proc_read <= '0';
-    end if;
-  end process;
-
-
-  process (proc_read, depack_read, N2P_empty) begin
-    if (proc_read = '1' or depack_read = '1') and N2P_empty = '0' then
-      N2P_read_en_in <= '1';
-    else
-      N2P_read_en_in <= '0';
-    end if;
+Proc_rd_enable:  process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
+      if (address = reserved_address and write_byte_enable = "0000" and Rec_Valid = '1' and N2P_empty = '0') then
+        proc_read <= '1';
+      else
+        proc_read <= '0';
+      end if;
 end process;
 
 
-  process(N2P_write_en, N2P_FIFO_write_pointer)begin
-    if N2P_write_en = '1'then
-       N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer + 1;
-    else
-       N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer;
-    end if;
-  end process;
+N2P_rd_enable:  process (proc_read, depack_read, N2P_empty) begin
+      if (proc_read = '1' or depack_read = '1') and N2P_empty = '0' then
+        N2P_read_en_in <= '1';
+      else
+        N2P_read_en_in <= '0';
+      end if;
+end process;
 
-  process(N2P_read_en, N2P_empty, N2P_FIFO_read_pointer)begin
+
+N2P_wr_pointer:  process(N2P_write_en, N2P_FIFO_write_pointer)begin
+      if N2P_write_en = '1'then
+         N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer + 1;
+      else
+         N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer;
+      end if;
+end process;
+
+N2P_rd_pointer:  process(N2P_read_en, N2P_empty, N2P_FIFO_read_pointer)begin
        if (N2P_read_en = '1' and N2P_empty = '0') then
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer + 1;
        else
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer;
        end if;
+end process;
+
+N2P_wr_en:  process(N2P_full, valid_in) begin
+       if (valid_in = '1' and N2P_full ='0') then
+           N2P_write_en <= '1';
+       else
+           N2P_write_en <= '0';
+       end if;
+end process;
+
+N2P_Full_Empty:  process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
+        if N2P_FIFO_read_pointer = N2P_FIFO_write_pointer  then
+                N2P_empty <= '1';
+        else
+                N2P_empty <= '0';
+        end if;
+
+        if N2P_FIFO_write_pointer = N2P_FIFO_read_pointer-1 then
+                N2P_full <= '1';
+        else
+                N2P_full <= '0';
+        end if;
   end process;
 
-  process(N2P_full, valid_in) begin
-     if (valid_in = '1' and N2P_full ='0') then
-         N2P_write_en <= '1';
-     else
-         N2P_write_en <= '0';
-     end if;
-  end process;
 
-  process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
-      if N2P_FIFO_read_pointer = N2P_FIFO_write_pointer  then
-              N2P_empty <= '1';
-      else
-              N2P_empty <= '0';
-      end if;
-
-      if N2P_FIFO_write_pointer = N2P_FIFO_read_pointer-1 then
-              N2P_full <= '1';
-      else
-              N2P_full <= '0';
-      end if;
-  end process;
-
-
-process(N2P_read_en, N2P_Data_out, old_address, flag_register) begin
-  if old_address = reserved_address and N2P_read_en = '1' then
-    data_read <= N2P_Data_out;
-  elsif old_address = flag_address then
-    data_read <= flag_register;
-  elsif old_address = counter_address then
-  	data_read <= "000000000000000000000000000000" & counter_register;
-  else
-    data_read <= (others => 'U');
-  end if;
+data_read_by_PE: process(N2P_read_en, N2P_Data_out, old_address, flag_register) begin
+        if old_address = reserved_address and N2P_read_en = '1' then
+          data_read <= N2P_Data_out;
+        elsif old_address = flag_address then
+          data_read <= flag_register;
+        elsif old_address = counter_address then
+        	data_read <= "000000000000000000000000000000" & counter_register;
+        else
+          data_read <= (others => 'U');
+        end if;
 end process;
 
 
-process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begin
-  counter_register_in <= counter_register;
-  if N2P_write_en = '1' and RX(31 downto 29) = "001" and N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
-  	counter_register_in <= counter_register;
-  elsif N2P_write_en = '1' and RX(31 downto 29) = "001" then
-    counter_register_in <= counter_register +1;
-  elsif N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
-  	counter_register_in <= counter_register -1;
-  end if;
+receoved_packet_counter:process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begin
+        counter_register_in <= counter_register;
+        if N2P_write_en = '1' and RX(31 downto 29) = "001" and N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
+        	counter_register_in <= counter_register;
+        elsif N2P_write_en = '1' and RX(31 downto 29) = "001" then
+          counter_register_in <= counter_register +1;
+        elsif N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
+        	counter_register_in <= counter_register -1;
+        end if;
 end process;
 
-process(N2P_Data_out, depack_state, N2P_empty, depack_state, Rec_Source_Address,
+Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, depack_state, Rec_Source_Address,
         Rec_Destination_Address, Rec_MEM_Address, Rec_RightsAndOpCode,
         Rec_Packet_Lenght, Rec_Packet_ID, N2P_read_en)
 
@@ -457,69 +451,68 @@ process(N2P_Data_out, depack_state, N2P_empty, depack_state, Rec_Source_Address,
         variable RECEIVED_LINEVARIABLE : line;
         file RECEIVED_FILE : text;
 
-  begin
+        begin
 
-  file_open(RECEIVED_FILE,"received.txt",APPEND_MODE);
-  -- default states
-  depack_state_in            <=  depack_state;
-  Rec_Source_Address_in      <=  Rec_Source_Address;
-  Rec_Destination_Address_in <= Rec_Destination_Address;
-  Rec_MEM_Address_in         <= Rec_MEM_Address;
-  Rec_RightsAndOpCode_in     <= Rec_RightsAndOpCode;
-  Rec_Packet_Lenght_in       <= Rec_Packet_Lenght;
-  Rec_Packet_ID_in           <= Rec_Packet_ID;
-  depack_read <= '0';
-  Rec_Valid_in<= Rec_Valid;
-  -------------------------------------------------
-  case depack_state is
-    when IDLE_input =>
-        if N2P_Data_out(31 downto 29) = "001" and N2P_empty = '0'  then
-            depack_state_in <= Header;
-            depack_read <= '1';
-        end if;
-    when Header =>
-        if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
-            depack_state_in <= Body_1;
-            Rec_Source_Address_in <= N2P_Data_out(28 downto 21);
-            Rec_Destination_Address_in <=  N2P_Data_out(20 downto 13);
-            Rec_MEM_Address_in(11 downto 0) <=  N2P_Data_out(12 downto 1);
-            receive_source_node := to_integer(unsigned(N2P_Data_out(28 downto 25)))* network_x+to_integer(unsigned(N2P_Data_out(24 downto 21)));
-            receive_destination_node :=to_integer(unsigned(N2P_Data_out(20 downto 17)))* network_x+to_integer(unsigned(N2P_Data_out(16 downto 13)));
-            depack_read <= '1';
-        end if;
-    when Body_1 =>
-        if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
-          depack_state_in <= Body_2;
-          Rec_MEM_Address_in(31 downto 12) <=  N2P_Data_out(28 downto 9);
-          Rec_RightsAndOpCode_in <=  N2P_Data_out(8 downto 1);
-          depack_read <= '1';
-        end if;
-    when Body_2 =>
-      if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0' then
-        depack_state_in <= other_body;
-        Rec_Packet_Lenght_in <=  N2P_Data_out(28 downto 15);
-        Rec_Packet_ID_in <=  N2P_Data_out(14 downto 1);
+        file_open(RECEIVED_FILE,"received.txt",APPEND_MODE);
+        -- default states
+        depack_state_in            <=  depack_state;
+        Rec_Source_Address_in      <=  Rec_Source_Address;
+        Rec_Destination_Address_in <= Rec_Destination_Address;
+        Rec_MEM_Address_in         <= Rec_MEM_Address;
+        Rec_RightsAndOpCode_in     <= Rec_RightsAndOpCode;
+        Rec_Packet_Lenght_in       <= Rec_Packet_Lenght;
+        Rec_Packet_ID_in           <= Rec_Packet_ID;
+        depack_read <= '0';
+        Rec_Valid_in<= Rec_Valid;
+        -------------------------------------------------
+        case depack_state is
+          when IDLE_input =>
+              if N2P_Data_out(31 downto 29) = "001" and N2P_empty = '0'  then
+                  depack_state_in <= Header;
+                  depack_read <= '1';
+              end if;
+          when Header =>
+              if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
+                  depack_state_in <= Body_1;
+                  Rec_Source_Address_in <= N2P_Data_out(28 downto 21);
+                  Rec_Destination_Address_in <=  N2P_Data_out(20 downto 13);
+                  Rec_MEM_Address_in(11 downto 0) <=  N2P_Data_out(12 downto 1);
+                  receive_source_node := to_integer(unsigned(N2P_Data_out(28 downto 25)))* network_x+to_integer(unsigned(N2P_Data_out(24 downto 21)));
+                  receive_destination_node :=to_integer(unsigned(N2P_Data_out(20 downto 17)))* network_x+to_integer(unsigned(N2P_Data_out(16 downto 13)));
+                  depack_read <= '1';
+              end if;
+          when Body_1 =>
+              if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
+                depack_state_in <= Body_2;
+                Rec_MEM_Address_in(31 downto 12) <=  N2P_Data_out(28 downto 9);
+                Rec_RightsAndOpCode_in <=  N2P_Data_out(8 downto 1);
+                depack_read <= '1';
+              end if;
+          when Body_2 =>
+            if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0' then
+              depack_state_in <= other_body;
+              Rec_Packet_Lenght_in <=  N2P_Data_out(28 downto 15);
+              Rec_Packet_ID_in <=  N2P_Data_out(14 downto 1);
 
-        receive_packet_length := to_integer(unsigned(N2P_Data_out(28 downto 15)));
-        receive_packet_id := to_integer(unsigned(N2P_Data_out(14 downto 1)));
-        Rec_Valid_in <= '1';
-      end if;
-    when other_body =>
-        -- here we have only payload!
-        if N2P_Data_out(31 downto 29) = "100" and N2P_empty = '0' and N2P_read_en = '1'  then
-          depack_state_in <= IDLE_input;
-          Rec_Valid_in <= '0';
+              receive_packet_length := to_integer(unsigned(N2P_Data_out(28 downto 15)));
+              receive_packet_id := to_integer(unsigned(N2P_Data_out(14 downto 1)));
+              Rec_Valid_in <= '1';
+            end if;
+          when other_body =>
+              -- here we have only payload!
+              if N2P_Data_out(31 downto 29) = "100" and N2P_empty = '0' and N2P_read_en = '1'  then
+                depack_state_in <= IDLE_input;
+                Rec_Valid_in <= '0';
 
-          write(RECEIVED_LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(receive_source_node) &
-                                       " to: " & integer'image(receive_destination_node) & " length: "& integer'image(receive_packet_length) &
-                                       " actual length: "& integer'image(0) &  " id: "& integer'image(receive_packet_id));
-          writeline(RECEIVED_FILE, RECEIVED_LINEVARIABLE);
-        end if;
-    end case;
-file_close(RECEIVED_FILE);
+                write(RECEIVED_LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(receive_source_node) &
+                                             " to: " & integer'image(receive_destination_node) & " length: "& integer'image(receive_packet_length) &
+                                             " actual length: "& integer'image(0) &  " id: "& integer'image(receive_packet_id));
+                writeline(RECEIVED_FILE, RECEIVED_LINEVARIABLE);
+              end if;
+          end case;
+          file_close(RECEIVED_FILE);
 end process;
 
 flag_register_in <= (not(Rec_Valid and not N2P_empty)) & P2N_full & "000000000000000000000000000000";
-
 irq_out <= '0';
 end; --architecture logic
