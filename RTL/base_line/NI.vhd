@@ -76,8 +76,8 @@ architecture logic of NI is
   signal packet_length_counter_in, packet_length_counter_out: std_logic_vector(13 downto 0);
   signal grant : std_logic;
 
-  type STATE_TYPE IS (IDLE, HEADER_FLIT, BODY_FLIT_2, BODY_FLIT_1, BODY_FLIT, TAIL_FLIT);
-  signal state, state_in   : STATE_TYPE := IDLE;
+  type packetizer_state_type IS (IDLE, HEADER_FLIT, BODY_FLIT_2, BODY_FLIT_1, BODY_FLIT, TAIL_FLIT);
+  signal packetizer_state, packetizer_state_in   : packetizer_state_type := IDLE;
   signal FIFO_Data_out : std_logic_vector(31 downto 0);
   signal flag_register, flag_register_in : std_logic_vector(31 downto 0);
 
@@ -96,7 +96,7 @@ architecture logic of NI is
   signal counter_register_in, counter_register : std_logic_vector(1 downto 0);
 
   -- this is for depacketizer section
-  type depacketizer_state_type is (Header, Body_1, Body_2, other_body, IDLE_input);
+  type depacketizer_state_type is (Header, Body_1, other_body, IDLE_input);
   signal depack_read, proc_read : std_logic;
   signal depack_state, depack_state_in : depacketizer_state_type;
   signal Rec_Valid, Rec_Valid_in  : std_logic;
@@ -115,13 +115,10 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       valid_data <= '0';
       P2N_FIFO_read_pointer  <= (others=>'0');
       P2N_FIFO_write_pointer <= (others=>'0');
-
-
       P2N_FIFO  <= (others => (others=>'0'));
-
       credit_counter_out <= "11";
       packet_length_counter_out <= "00000000000000";
-      state <= IDLE;
+      packetizer_state <= IDLE;
       packet_counter_out <= "00000000000000";
       ------------------------------------------------
       N2P_FIFO  <= (others => (others=>'0'));
@@ -157,7 +154,7 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       if write_byte_enable /= "0000" then
          storage <= storage_in;
       end if;
-      state <= state_in;
+      packetizer_state <= packetizer_state_in;
       ------------------------------------------------
       if N2P_write_en = '1' then
         --write into the memory
@@ -168,7 +165,7 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       N2P_FIFO_read_pointer  <= N2P_FIFO_read_pointer_in;
       credit_out <= '0';
       N2P_read_en <= N2P_read_en_in;
-      if N2P_read_en = '1' then
+      if N2P_read_en = '1' or depack_read = '1' then
         credit_out <= '1';
       end if;
       flag_register <= flag_register_in;
@@ -274,7 +271,7 @@ end process;
 
 
 
-Packetizer:process(P2N_empty, state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)
+Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)
     begin
         -- Some initializations
         TX <= (others => '0');
@@ -282,12 +279,12 @@ Packetizer:process(P2N_empty, state, credit_counter_out, packet_length_counter_o
         packet_length_counter_in <= packet_length_counter_out;
         packet_counter_in <= packet_counter_out;
 
-        case(state) is
+        case(packetizer_state) is
             when IDLE =>
                 if P2N_empty = '0' then
-                    state_in <= HEADER_FLIT;
+                    packetizer_state_in <= HEADER_FLIT;
                 else
-                    state_in <= IDLE;
+                    packetizer_state_in <= IDLE;
                 end if;
 
             when HEADER_FLIT =>
@@ -295,17 +292,17 @@ Packetizer:process(P2N_empty, state, credit_counter_out, packet_length_counter_o
                     grant <= '1';
                     --FIFO_Data_out(19 downto 0) contains the following: Destination Y- 4 bits, Destination X-4 bits, Mem_address_1 12bit
                     TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
-                    state_in <= BODY_FLIT_1;
+                    packetizer_state_in <= BODY_FLIT_1;
                 else
-                    state_in <= HEADER_FLIT;
+                    packetizer_state_in <= HEADER_FLIT;
                 end if;
             when BODY_FLIT_1 =>
                       if credit_counter_out /= "00" and P2N_empty = '0'then
                         grant <= '1';
                         TX <=  "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 0));
-                        state_in <= BODY_FLIT_2;
+                        packetizer_state_in <= BODY_FLIT_2;
                       else
-                        state_in <= BODY_FLIT_1;
+                        packetizer_state_in <= BODY_FLIT_1;
                       end if;
 
             when BODY_FLIT_2 =>
@@ -315,9 +312,9 @@ Packetizer:process(P2N_empty, state, credit_counter_out, packet_length_counter_o
                     -- FIFO_Data_out(27 downto 14) contains the packet length
                     -- FIFO_Data_out(13 downto 0) is used for passing the packet_counter_out from PE and we can compare here! or reuse it for other purpose
                     TX <=  "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out);
-                    state_in <= BODY_FLIT;
+                    packetizer_state_in <= BODY_FLIT;
                   else
-                    state_in <= BODY_FLIT_2;
+                    packetizer_state_in <= BODY_FLIT_2;
                   end if;
 
             when BODY_FLIT =>
@@ -327,12 +324,12 @@ Packetizer:process(P2N_empty, state, credit_counter_out, packet_length_counter_o
                     packet_length_counter_in <= packet_length_counter_out - 1;
 
                     if packet_length_counter_out > 2 then
-                      state_in <= BODY_FLIT;
+                      packetizer_state_in <= BODY_FLIT;
                     else
-                      state_in <= TAIL_FLIT;
+                      packetizer_state_in <= TAIL_FLIT;
                     end if;
                 else
-                    state_in <= BODY_FLIT;
+                    packetizer_state_in <= BODY_FLIT;
                 end if;
 
             when TAIL_FLIT =>
@@ -341,12 +338,12 @@ Packetizer:process(P2N_empty, state, credit_counter_out, packet_length_counter_o
                     packet_length_counter_in <= packet_length_counter_out - 1;
                     TX <= "100" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("100" & FIFO_Data_out(27 downto 0));
                     packet_counter_in <= packet_counter_out +1;
-                    state_in <= IDLE;
+                    packetizer_state_in <= IDLE;
                 else
-                    state_in <= TAIL_FLIT;
+                    packetizer_state_in <= TAIL_FLIT;
                 end if;
             when others =>
-                state_in <= IDLE;
+                packetizer_state_in <= IDLE;
         end case ;
 
 end procesS;
@@ -371,7 +368,7 @@ end process;
 
 
 N2P_rd_enable:  process (proc_read, depack_read, N2P_empty) begin
-      if (proc_read = '1' or depack_read = '1') and N2P_empty = '0' then
+      if proc_read = '1' and N2P_empty = '0' then
         N2P_read_en_in <= '1';
       else
         N2P_read_en_in <= '0';
@@ -387,8 +384,8 @@ N2P_wr_pointer:  process(N2P_write_en, N2P_FIFO_write_pointer)begin
       end if;
 end process;
 
-N2P_rd_pointer:  process(N2P_read_en, N2P_empty, N2P_FIFO_read_pointer)begin
-       if (N2P_read_en = '1' and N2P_empty = '0') then
+N2P_rd_pointer:  process(N2P_read_en,depack_read, N2P_empty, N2P_FIFO_read_pointer)begin
+       if ((N2P_read_en = '1' or depack_read = '1') and N2P_empty = '0') then
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer + 1;
        else
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer;
@@ -442,7 +439,7 @@ receoved_packet_counter:process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begi
         end if;
 end process;
 
-Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, depack_state, Rec_Source_Address,
+Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
         Rec_Destination_Address, Rec_MEM_Address, Rec_RightsAndOpCode,
         Rec_Packet_Lenght, Rec_Packet_ID, N2P_read_en)
 
@@ -450,63 +447,74 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, depack_state, Rec_S
         variable receive_source_node, receive_destination_node, receive_packet_id, receive_counter, receive_packet_length: integer;
         variable RECEIVED_LINEVARIABLE : line;
         file RECEIVED_FILE : text;
-
+        variable flit_counter : integer;
         begin
 
         file_open(RECEIVED_FILE,"received.txt",APPEND_MODE);
         -- default states
         depack_state_in            <=  depack_state;
         Rec_Source_Address_in      <=  Rec_Source_Address;
-        Rec_Destination_Address_in <= Rec_Destination_Address;
-        Rec_MEM_Address_in         <= Rec_MEM_Address;
-        Rec_RightsAndOpCode_in     <= Rec_RightsAndOpCode;
-        Rec_Packet_Lenght_in       <= Rec_Packet_Lenght;
-        Rec_Packet_ID_in           <= Rec_Packet_ID;
+        Rec_Destination_Address_in <=  Rec_Destination_Address;
+        Rec_MEM_Address_in         <=  Rec_MEM_Address;
+        Rec_RightsAndOpCode_in     <=  Rec_RightsAndOpCode;
+        Rec_Packet_Lenght_in       <=  Rec_Packet_Lenght;
+        Rec_Packet_ID_in           <=  Rec_Packet_ID;
         depack_read <= '0';
         Rec_Valid_in<= Rec_Valid;
         -------------------------------------------------
         case depack_state is
           when IDLE_input =>
+              flit_counter := 0;
               if N2P_Data_out(31 downto 29) = "001" and N2P_empty = '0'  then
+                --here we read header
                   depack_state_in <= Header;
-                  depack_read <= '1';
-              end if;
-          when Header =>
-              if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
-                  depack_state_in <= Body_1;
                   Rec_Source_Address_in <= N2P_Data_out(28 downto 21);
                   Rec_Destination_Address_in <=  N2P_Data_out(20 downto 13);
                   Rec_MEM_Address_in(11 downto 0) <=  N2P_Data_out(12 downto 1);
-                  receive_source_node := to_integer(unsigned(N2P_Data_out(28 downto 25)))* network_x+to_integer(unsigned(N2P_Data_out(24 downto 21)));
-                  receive_destination_node :=to_integer(unsigned(N2P_Data_out(20 downto 17)))* network_x+to_integer(unsigned(N2P_Data_out(16 downto 13)));
+                  receive_source_node := to_integer(unsigned(N2P_Data_out(28 downto 25))* network_x+to_integer(unsigned(N2P_Data_out(24 downto 21))));
+                  receive_destination_node :=to_integer(unsigned(N2P_Data_out(20 downto 17))* network_x+to_integer(unsigned(N2P_Data_out(16 downto 13))));
+                  depack_read <= '1';
+              end if;
+          when Header =>
+              flit_counter := 1;
+              if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
+                --here we read body 1
+                  depack_state_in <= Body_1;
+                  Rec_MEM_Address_in(31 downto 12) <=  N2P_Data_out(28 downto 9);
+                  Rec_RightsAndOpCode_in <=  N2P_Data_out(8 downto 1);
                   depack_read <= '1';
               end if;
           when Body_1 =>
+              flit_counter := 2;
               if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
-                depack_state_in <= Body_2;
-                Rec_MEM_Address_in(31 downto 12) <=  N2P_Data_out(28 downto 9);
-                Rec_RightsAndOpCode_in <=  N2P_Data_out(8 downto 1);
+                --here we read body 2
+                depack_state_in <= other_body;
+                Rec_Packet_Lenght_in <=  N2P_Data_out(28 downto 15);
+                Rec_Packet_ID_in <=  N2P_Data_out(14 downto 1);
+                receive_packet_length := to_integer(unsigned(N2P_Data_out(28 downto 15)));
+                receive_packet_id := to_integer(unsigned(N2P_Data_out(14 downto 1)));
                 depack_read <= '1';
+                flit_counter := flit_counter+1;
               end if;
-          when Body_2 =>
-            if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0' then
-              depack_state_in <= other_body;
-              Rec_Packet_Lenght_in <=  N2P_Data_out(28 downto 15);
-              Rec_Packet_ID_in <=  N2P_Data_out(14 downto 1);
-
-              receive_packet_length := to_integer(unsigned(N2P_Data_out(28 downto 15)));
-              receive_packet_id := to_integer(unsigned(N2P_Data_out(14 downto 1)));
-              Rec_Valid_in <= '1';
-            end if;
           when other_body =>
+              Rec_Valid_in <= '1';
               -- here we have only payload!
+              if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0' and N2P_read_en = '1'  then
+                flit_counter := flit_counter+1;
+              end if;
               if N2P_Data_out(31 downto 29) = "100" and N2P_empty = '0' and N2P_read_en = '1'  then
                 depack_state_in <= IDLE_input;
                 Rec_Valid_in <= '0';
+                flit_counter := flit_counter+1;
+                assert (flit_counter = receive_packet_length ) report "wrong packet size at node "& integer'image(current_x+current_y*network_x) &
+                                                                      "packet length:"& integer'image(receive_packet_length) &
+                                                                      " actual length: "& integer'image(flit_counter)  severity failure;
 
+                assert (receive_destination_node = (current_x+current_y*network_x)) report "wrong destination recived at node "& integer'image(current_x+current_y*network_x) &
+                                                                      " recived dest: "& integer'image(receive_destination_node) severity failure;
                 write(RECEIVED_LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(receive_source_node) &
                                              " to: " & integer'image(receive_destination_node) & " length: "& integer'image(receive_packet_length) &
-                                             " actual length: "& integer'image(0) &  " id: "& integer'image(receive_packet_id));
+                                             " actual length: "& integer'image(flit_counter) &  " id: "& integer'image(receive_packet_id));
                 writeline(RECEIVED_FILE, RECEIVED_LINEVARIABLE);
               end if;
           end case;
