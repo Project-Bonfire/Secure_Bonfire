@@ -40,7 +40,7 @@ Free_Slots_S <= req_X_S & credit_counter_S;
 --Free_Slots_L <= req_X_L & credit_counter_L;
 
 
-process (Free_Slots_N, Free_Slots_E, Free_Slots_W, Free_Slots_S)
+process (Free_Slots_N, Free_Slots_E, Free_Slots_W, Free_Slots_S, req_X_N, req_X_E, req_X_W, req_X_S)
 	variable Max_Free_Slots : std_logic_vector (2 downto 0) := Free_Slots_N;
 begin
 	 dir <= N;
