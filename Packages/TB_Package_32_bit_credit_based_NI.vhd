@@ -88,7 +88,7 @@ package body TB_Package is
     file SEND_FILE : text;
 
 
-    
+
 
 
     -- sending variables

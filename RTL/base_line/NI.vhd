@@ -97,7 +97,7 @@ architecture logic of NI is
 
   -- this is for depacketizer section
   type depacketizer_state_type is (Header, Body_1, other_body, IDLE_input);
-  signal depack_read, proc_read : std_logic;
+  signal depack_read : std_logic;
   signal depack_state, depack_state_in : depacketizer_state_type;
   signal Rec_Valid, Rec_Valid_in  : std_logic;
   signal Rec_MEM_Address, Rec_MEM_Address_in                  : std_logic_vector(31 downto 0);
@@ -360,20 +360,12 @@ end process;
 
 Proc_rd_enable:  process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
       if (address = reserved_address and write_byte_enable = "0000" and Rec_Valid = '1' and N2P_empty = '0') then
-        proc_read <= '1';
-      else
-        proc_read <= '0';
-      end if;
-end process;
-
-
-N2P_rd_enable:  process (proc_read, depack_read, N2P_empty) begin
-      if proc_read = '1' and N2P_empty = '0' then
         N2P_read_en_in <= '1';
       else
         N2P_read_en_in <= '0';
       end if;
 end process;
+
 
 
 N2P_wr_pointer:  process(N2P_write_en, N2P_FIFO_write_pointer)begin
