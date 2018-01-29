@@ -138,6 +138,7 @@ end COMPONENT;
   COMPONENT NI_vc is
      generic(current_x : integer := 10; 	-- the current node's x
              current_y : integer := 10; 	-- the current node's y
+             network_x : integer := 4 ;
              NI_depth : integer := 32;
              NI_couter_size: integer:= 5; -- should be set to log2 of NI_depth
              reserved_address : std_logic_vector(29 downto 0)    := "000000000000000001111111111110"; -- NI's memory mapped reserved VC_0
