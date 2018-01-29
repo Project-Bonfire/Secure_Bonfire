@@ -7,6 +7,7 @@ import sys
 network_dime_x = 4
 network_dime_y = 4
 data_width = 32
+fifo_depth = 4
 random_dest = False
 got_finish_time = False
 sim_finish_time = None
@@ -30,6 +31,11 @@ if '-DW' in sys.argv[1:]:
   data_width = int(sys.argv[sys.argv.index('-DW')+1])
   if data_width % 2 != 0:
     raise ValueError("wrong data width. please choose powers of 2. for example 32!")
+
+if '-FIFOD' in sys.argv[1:]:
+  fifo_depth = int(sys.argv[sys.argv.index('-FIFOD')+1])
+  if fifo_depth <= 1:
+    raise ValueError("Wrong FIFO depth! FIFO depth must at least be 2 slots.")
 
 if '-Rand'  in sys.argv[1:]:
   random_dest = True
@@ -107,24 +113,24 @@ noc_file.write("architecture behavior of tb_network_"+str(network_dime_x)+"x"+st
 noc_file.write("-- Declaring network component\n")
 
 noc_file.write("\n")
-noc_file.write("function log2( i : integer) return integer is \n")
-noc_file.write("    variable temp    : integer := i; \n")
-noc_file.write("    variable ret_val : integer := 1; --log2 of 0 should equal 1 because you still need 1 bit to represent 0 \n")
-noc_file.write("  begin                  \n")
-noc_file.write("    while temp > 1 loop \n")
-noc_file.write("      ret_val := ret_val + 1; \n")
-noc_file.write("      temp    := temp / 2;      \n")
-noc_file.write("    end loop; \n")
-noc_file.write("     \n")
-noc_file.write("    return ret_val; \n")
-noc_file.write("  end function; \n")
-noc_file.write("\n")
+# noc_file.write("function log2( i : integer) return integer is \n")
+# noc_file.write("    variable temp    : integer := i; \n")
+# noc_file.write("    variable ret_val : integer := 1; --log2 of 0 should equal 1 because you still need 1 bit to represent 0 \n")
+# noc_file.write("  begin                  \n")
+# noc_file.write("    while temp > 1 loop \n")
+# noc_file.write("      ret_val := ret_val + 1; \n")
+# noc_file.write("      temp    := temp / 2;      \n")
+# noc_file.write("    end loop; \n")
+# noc_file.write("     \n")
+# noc_file.write("    return ret_val; \n")
+# noc_file.write("  end function; \n")
+# noc_file.write("\n")
 
 string_to_print = ""
 noc_file.write("component network_"+str(network_dime_x)+"x"+str(network_dime_y)+" is\n")
 
 
-noc_file.write(" generic (DATA_WIDTH: integer := 32);\n")
+noc_file.write(" generic (DATA_WIDTH: integer := 32; FIFO_DEPTH: integer := 4; CREDIT_COUNTER_LENGTH: integer := 2);\n")
 noc_file.write("port (reset: in  std_logic; \n")
 noc_file.write("\tclk: in  std_logic; \n")
 
@@ -162,10 +168,10 @@ noc_file.write("\n")
 noc_file.write("-- generating bulk signals...\n")
 for i in range(0, network_dime_x*network_dime_y):
     noc_file.write("\tsignal RX_L_"+str(i)+", TX_L_"+str(i)+":  std_logic_vector ("+str(data_width-1)+" downto 0);\n")
-    noc_file.write("\tsignal credit_counter_out_"+str(i)+":  std_logic_vector (1 downto 0);\n")
+    noc_file.write("\tsignal credit_counter_out_"+str(i)+":  std_logic_vector ("+str(int(ceil(log(fifo_depth)/log(2)))-1)+" downto 0);\n")
     noc_file.write("\tsignal credit_out_L_"+str(i)+", credit_in_L_"+str(i)+", valid_in_L_"+str(i)+", valid_out_L_"+str(i) + ": std_logic;\n")
     if vc:
-        noc_file.write("\tsignal credit_counter_out_vc_"+str(i)+":  std_logic_vector (1 downto 0);\n")
+        noc_file.write("\tsignal credit_counter_out_vc_"+str(i)+":  std_logic_vector ("+str(int(ceil(log(fifo_depth)/log(2)))-1)+" downto 0);\n")
         noc_file.write("\tsignal credit_out_vc_L_"+str(i)+", credit_in_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+", valid_out_vc_L_"+str(i) + ": std_logic;\n")
 
 if add_NI:
@@ -248,7 +254,7 @@ for i in range(0, network_dime_x*network_dime_y):
 
 
 string_to_print = ""
-string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+" generic map (DATA_WIDTH  => "+str(data_width)+")\n"
+string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+" generic map (DATA_WIDTH  => "+str(data_width)+", FIFO_DEPTH => "+str(fifo_depth)+", CREDIT_COUNTER_LENGTH => "+str(int(ceil(log(fifo_depth)/log(2))))+")\n"
 string_to_print += "port map (reset, clk, \n"
 
 for i in range(network_dime_x*network_dime_y):
@@ -273,7 +279,8 @@ if add_NI:
           noc_file.write("NI_" + str(node_number) + ": NI_vc \n")
       else:
         noc_file.write("NI_" + str(node_number) + ": NI \n")
-      noc_file.write("   generic map(current_x => " + str(node_number%network_dime_x) + ", current_y => " + str(node_number/network_dime_x) + ",\n")
+      noc_file.write("   generic map(FIFO_DEPTH => " + str(fifo_depth) + ", CREDIT_COUNTER_LENGTH => " + str(int(ceil(log(fifo_depth)/log(2)))) + ",\n")
+      noc_file.write("               current_x => " + str(node_number%network_dime_x) + ", current_y => " + str(node_number/network_dime_x) + ",\n")
       noc_file.write("               network_x => " + str(network_dime_x) + ",\n")
       noc_file.write("               NI_depth => " + str(NI_depth) + ",\n")
       noc_file.write("               NI_couter_size => " + str(int(ceil(log(NI_depth)/log(2)))) + "\n")
@@ -333,23 +340,24 @@ else:
         else:
           random_end = random.randint(random_start, 200)
 
-        noc_file.write("credit_counter_control(clk, credit_out_L_"+str(i)+", valid_in_L_"+str(i)+", credit_counter_out_"+str(i)+");\n")
+        noc_file.write("credit_counter_control("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", clk, credit_out_L_"+str(i)+", valid_in_L_"+str(i)+", credit_counter_out_"+str(i)+");\n")
+
         if vc:
-            noc_file.write("credit_counter_control(clk, credit_out_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+", credit_counter_out_vc_"+str(i)+");\n")
+            noc_file.write("credit_counter_control("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", clk, credit_out_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+", credit_counter_out_vc_"+str(i)+");\n")
 
         if random_dest:
             # TB_Package file for VC needs to be fixed !!!
             if vc:
-                noc_file.write("gen_random_packet("+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
+                noc_file.write("gen_random_packet("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", "+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
                         str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", credit_counter_out_vc_"+str(i)+", valid_in_vc_L_"+str(i)+", RX_L_"+str(i)+");\n")
             else:
-                noc_file.write("gen_random_packet("+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
+                noc_file.write("gen_random_packet("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", "+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
                               str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", RX_L_"+str(i)+");\n")
         # Bit-Reversal traffic in TB_Package file for both normal and VC needs to be fixed !!!
         elif bit_reversal:
             # Package file for VC needs to be fixed !!!
             if vc:
-                noc_file.write("gen_bit_reversed_packet("+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
+                noc_file.write("gen_bit_reversed_packet("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", "+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
                         str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", credit_counter_out_vc_"+str(i)+", valid_in_vc_L_"+str(i)+", RX_L_"+str(i)+");\n")
             else:
                 # gen_bit_reversed_packet needs fixing!!!

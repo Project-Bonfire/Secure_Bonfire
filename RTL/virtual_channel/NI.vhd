@@ -20,10 +20,12 @@ use ieee.std_logic_misc.all;
 
 
 entity NI_vc is
-   generic(current_x : integer := 10; 	-- the current node's x
+   generic(FIFO_DEPTH: in integer := 4;
+           CREDIT_COUNTER_LENGTH: in integer := 2;
+           current_x : integer := 10; 	-- the current node's x
            current_y : integer := 10; 	-- the current node's y
-           network_x : integer := 4 ;
-           NI_depth : integer := 32;
+           network_x : integer := 4;    -- the number of nodes along x direction in the NoC
+           NI_depth : integer := 32;	-- The depth of NI's FIFO in terms of flit slots
            NI_couter_size: integer:= 5; -- should be set to log2 of NI_depth
            reserved_address : std_logic_vector(29 downto 0)    := "000000000000000001111111111110"; -- NI's memory mapped reserved VC_0
            reserved_address_vc : std_logic_vector(29 downto 0) := "000000000000000001111111111111"; -- NI's memory mapped reserved for VC_1
@@ -75,8 +77,8 @@ architecture logic of NI_vc is
   signal P2N_full, P2N_empty: std_logic;
 
 
-  signal credit_counter_in, credit_counter_out: std_logic_vector(1 downto 0);
-  signal credit_counter_vc_in, credit_counter_vc_out: std_logic_vector(1 downto 0);
+  signal credit_counter_in, credit_counter_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
+  signal credit_counter_vc_in, credit_counter_vc_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal packet_counter_in, packet_counter_out: std_logic_vector(13 downto 0);
   signal packet_length_counter_in, packet_length_counter_out: std_logic_vector(13 downto 0);
   signal grant,grant_vc : std_logic;
@@ -104,6 +106,9 @@ architecture logic of NI_vc is
   signal N2P_read_en, N2P_read_en_in, N2P_read_en_vc, N2P_read_en_vc_in, N2P_write_en, N2P_write_en_vc: std_logic;
   signal counter_register_in, counter_register : std_logic_vector(1 downto 0);
 
+  constant max_credit_counter_value: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := std_logic_vector(to_unsigned(FIFO_DEPTH-1, CREDIT_COUNTER_LENGTH));
+  constant all_zeros: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := (others => '0');
+
 begin
 
 CLK_proc: process(clk, enable, write_byte_enable) begin
@@ -115,8 +120,8 @@ CLK_proc: process(clk, enable, write_byte_enable) begin
 
       P2N_FIFO  <= (others => (others=>'0'));
 
-      credit_counter_out <= "11";
-      credit_counter_vc_out <= "11";
+      credit_counter_out <= max_credit_counter_value;
+      credit_counter_vc_out <= max_credit_counter_value;
       packet_length_counter_out <= "00000000000000";
       state <= IDLE;
       packet_counter_out <= "00000000000000";
@@ -274,7 +279,7 @@ VC_0_credit_counter:process (credit_in, credit_counter_out, grant)begin
     credit_counter_in <= credit_counter_out;
     if credit_in = '1' and grant = '1' then
          credit_counter_in <= credit_counter_out;
-    elsif credit_in = '1'  and credit_counter_out < 3 then
+    elsif credit_in = '1'  and credit_counter_out < max_credit_counter_value then
          credit_counter_in <= credit_counter_out + 1;
     elsif grant = '1' and credit_counter_out > 0 then
          credit_counter_in <= credit_counter_out - 1;
@@ -286,7 +291,7 @@ VC_1_credit_counter:process (credit_in_vc, credit_counter_vc_out, grant_vc)begin
     credit_counter_vc_in <= credit_counter_vc_out;
     if credit_in_vc = '1' and grant_vc = '1' then
          credit_counter_vc_in <= credit_counter_vc_out;
-    elsif credit_in_vc = '1'  and credit_counter_vc_out < 3 then
+    elsif credit_in_vc = '1'  and credit_counter_vc_out < max_credit_counter_value then
          credit_counter_vc_in <= credit_counter_vc_out + 1;
     elsif grant_vc = '1' and credit_counter_vc_out > 0 then
          credit_counter_vc_in <= credit_counter_vc_out - 1;
@@ -317,7 +322,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
 
             when HEADER_FLIT =>
                     if FIFO_Data_out(21) = '1' then
-                        if credit_counter_vc_out /= "00" and P2N_empty = '0' then
+                        if credit_counter_vc_out /= all_zeros and P2N_empty = '0' then
                           grant_vc<= '1';
                           vc_select_in <= '1';
                           TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
@@ -326,7 +331,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
                               state_in <= HEADER_FLIT;
                         end if;
                     else
-                        if credit_counter_out /= "00" and P2N_empty = '0' then
+                        if credit_counter_out /= all_zeros and P2N_empty = '0' then
                           grant<= '1';
                           vc_select_in <= '0';
                           TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
@@ -338,7 +343,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
 
             when BODY_FLIT_1 =>
                   if vc_select_out = '0' then
-                      if credit_counter_out /= "00" and P2N_empty = '0'then
+                      if credit_counter_out /= all_zeros and P2N_empty = '0'then
                         grant <= '1';
                         TX <=  "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 0));
                         state_in <= BODY_FLIT_2;
@@ -346,7 +351,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
                         state_in <= BODY_FLIT_1;
                       end if;
                   else
-                    if credit_counter_vc_out /= "00" and P2N_empty = '0'then
+                    if credit_counter_vc_out /= all_zeros and P2N_empty = '0'then
                       grant_vc <= '1';
                       TX <=  "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 0));
                       state_in <= BODY_FLIT_2;
@@ -357,7 +362,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
 
           when BODY_FLIT_2 =>
                 if vc_select_out = '0' then
-                    if credit_counter_out /= "00" and P2N_empty = '0'then
+                    if credit_counter_out /= all_zeros and P2N_empty = '0'then
                       packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-3;
                       grant <= '1';
                       TX <=  "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out);
@@ -366,7 +371,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
                       state_in <= BODY_FLIT_2;
                     end if;
                 else
-                  if credit_counter_vc_out /= "00" and P2N_empty = '0'then
+                  if credit_counter_vc_out /= all_zeros and P2N_empty = '0'then
                     packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-3;
                     grant_vc <= '1';
                     TX <=  "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 14) &  packet_counter_out);
@@ -378,7 +383,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
 
             when BODY_FLIT =>
               if vc_select_out = '0' then
-                if credit_counter_out /= "00" and P2N_empty = '0'then
+                if credit_counter_out /= all_zeros and P2N_empty = '0'then
                     grant <= '1';
                     TX <= "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("010" & FIFO_Data_out(27 downto 0));
                     packet_length_counter_in <= packet_length_counter_out - 1;
@@ -392,7 +397,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
                     state_in <= BODY_FLIT;
                 end if;
               else
-                if credit_counter_vc_out /= "00" and P2N_empty = '0'then
+                if credit_counter_vc_out /= all_zeros and P2N_empty = '0'then
                     grant_vc<= '1';
                     TX <= "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("010" & FIFO_Data_out(27 downto 0));
                     packet_length_counter_in <= packet_length_counter_out - 1;
@@ -409,7 +414,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
 
             when TAIL_FLIT =>
               if vc_select_out = '0' then
-                if credit_counter_out /= "00" and P2N_empty = '0' then
+                if credit_counter_out /= all_zeros and P2N_empty = '0' then
                     grant <= '1';
                     packet_length_counter_in <= packet_length_counter_out - 1;
                     TX <= "100" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("100" & FIFO_Data_out(27 downto 0));
@@ -420,7 +425,7 @@ Packet_generator: process(P2N_empty, state, credit_counter_out,
                     state_in <= TAIL_FLIT;
                 end if;
               else
-                if credit_counter_vc_out /= "00" and P2N_empty = '0' then
+                if credit_counter_vc_out /= all_zeros and P2N_empty = '0' then
                     grant_vc<= '1';
                     packet_length_counter_in <= packet_length_counter_out - 1;
                     TX <= "100" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("100" & FIFO_Data_out(27 downto 0));

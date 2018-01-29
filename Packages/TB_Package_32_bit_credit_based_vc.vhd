@@ -9,20 +9,23 @@ use IEEE.NUMERIC_STD.all;
  use ieee.std_logic_misc.all;
 
 package TB_Package is
+
   function Header_gen(network_size_x, source, destination, Mem_address: integer)return std_logic_vector;
   function Body_1_gen(Mem_address,OPCODE: integer; RW, DI, ROLE: std_logic) return std_logic_vector;
   function Body_2_gen(Packet_length, packet_id: integer ) return std_logic_vector ;
   function Body_gen(Data: integer) return std_logic_vector;
   function Tail_gen(Data: integer) return std_logic_vector;
 
-  procedure credit_counter_control(signal clk: in std_logic;
+  procedure credit_counter_control(FIFO_DEPTH: in integer; CREDIT_COUNTER_LENGTH: in integer; signal clk: in std_logic;
                                  signal credit_in: in std_logic; signal valid_out: in std_logic;
-                                 signal credit_counter_out: out std_logic_vector(1 downto 0));
-  procedure gen_random_packet(network_size_x, network_size_y, frame_length, source, initial_delay, min_packet_size, max_packet_size: in integer;
+                                 signal credit_counter_out: out std_logic_vector);
+
+  procedure gen_random_packet(FIFO_DEPTH, CREDIT_COUNTER_LENGTH, network_size_x, network_size_y, frame_length, source, initial_delay, min_packet_size, max_packet_size: in integer;
                       finish_time: in time; signal clk: in std_logic;
-                      signal credit_counter_in: in std_logic_vector(1 downto 0); signal valid_out: out std_logic;
-                      signal credit_counter_in_vc: in std_logic_vector(1 downto 0); signal valid_out_vc: out std_logic;
+                      signal credit_counter_in: in std_logic_vector; signal valid_out: out std_logic;
+                      signal credit_counter_in_vc: in std_logic_vector; signal valid_out_vc: out std_logic;
                       signal port_in: out std_logic_vector);
+
   procedure get_packet(network_size_x, DATA_WIDTH, initial_delay, Node_ID: in integer; signal clk: in std_logic;
                      signal credit_out: out std_logic; signal valid_in: in std_logic;
                      signal credit_out_vc: out std_logic; signal valid_in_vc: in std_logic;
@@ -91,14 +94,15 @@ package body TB_Package is
     return Tail_flit;
   end Tail_gen;
 
-  procedure credit_counter_control(signal clk: in std_logic;
+  procedure credit_counter_control(FIFO_DEPTH: in integer; CREDIT_COUNTER_LENGTH: in integer; signal clk: in std_logic;
                                    signal credit_in: in std_logic; signal valid_out: in std_logic;
-                                   signal credit_counter_out: out std_logic_vector(1 downto 0)) is
+                                   signal credit_counter_out: out std_logic_vector) is
 
-    variable credit_counter: std_logic_vector (1 downto 0);
+    variable credit_counter: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
 
     begin
-    credit_counter := "11";
+    
+    credit_counter := std_logic_vector(to_unsigned(FIFO_DEPTH-1,CREDIT_COUNTER_LENGTH));
 
     while true loop
       credit_counter_out<= credit_counter;
@@ -115,10 +119,10 @@ package body TB_Package is
     end loop;
   end credit_counter_control;
 
-  procedure gen_random_packet(network_size_x, network_size_y, frame_length, source, initial_delay, min_packet_size, max_packet_size: in integer;
+  procedure gen_random_packet(FIFO_DEPTH, CREDIT_COUNTER_LENGTH, network_size_x, network_size_y, frame_length, source, initial_delay, min_packet_size, max_packet_size: in integer;
                       finish_time: in time; signal clk: in std_logic;
-                      signal credit_counter_in: in std_logic_vector(1 downto 0); signal valid_out: out std_logic;
-                      signal credit_counter_in_vc: in std_logic_vector(1 downto 0); signal valid_out_vc: out std_logic;
+                      signal credit_counter_in: in std_logic_vector; signal valid_out: out std_logic;
+                      signal credit_counter_in_vc: in std_logic_vector; signal valid_out_vc: out std_logic;
                       signal port_in: out std_logic_vector) is
     variable seed1 :positive := source+1;
     variable seed2 :positive := source+1;
@@ -128,8 +132,10 @@ package body TB_Package is
     variable destination_id: integer;
     variable id_counter, frame_starting_delay, Packet_length, frame_ending_delay : integer:= 0;
     variable Mem_address1, Mem_address2, OPCODE: integer := 0;
-    variable credit_counter: std_logic_vector (1 downto 0);
+    variable credit_counter: std_logic_vector (CREDIT_COUNTER_LENGTH-1 downto 0);
+    constant all_zeros: std_logic_vector (CREDIT_COUNTER_LENGTH-1 downto 0) := (others => '0');
     variable vc: integer:= 0;
+
     begin
 
     Packet_length := integer((integer(rand*100.0)*frame_length)/100);
@@ -220,14 +226,14 @@ package body TB_Package is
             -- it would be Packet_length-2 to enumerate them, you can count from 0 to Packet_length-3.
 
             if vc = 0 then
-                if credit_counter_in = "00" then
+                if credit_counter_in = all_zeros then
                     valid_out <= '0';
                     -- Wait until next router/NI has at least enough space for one flit in its input FIFO
                     wait until credit_counter_in'event and credit_counter_in > 0;
                     wait until clk'event and clk ='0';
                 end if;
             else
-                if credit_counter_in_vc = "00" then
+                if credit_counter_in_vc = all_zeros then
                     valid_out_vc <= '0';
                     -- Wait until next router/NI has at least enough space for one flit in its input FIFO
                     wait until credit_counter_in_vc'event and credit_counter_in_vc > 0;
@@ -255,14 +261,14 @@ package body TB_Package is
       end loop;
 
       if vc = 0 then
-          if credit_counter_in = "00" then
+          if credit_counter_in = all_zeros then
               valid_out <= '0';
               -- Wait until next router/NI has at least enough space for one flit in its input FIFO
               wait until credit_counter_in'event and credit_counter_in > 0;
               wait until clk'event and clk ='0';
           end if;
       else
-          if credit_counter_in_vc = "00" then
+          if credit_counter_in_vc = all_zeros then
               valid_out_vc <= '0';
               -- Wait until next router/NI has at least enough space for one flit in its input FIFO
               wait until credit_counter_in_vc'event and credit_counter_in_vc > 0;

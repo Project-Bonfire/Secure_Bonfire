@@ -2,8 +2,6 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
---use IEEE.math_real."ceil";
---use IEEE.math_real."log2";
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 USE ieee.numeric_std.ALL;
@@ -14,6 +12,8 @@ use work.router_pack.all;
 entity router_credit_based is
     generic (
         DATA_WIDTH: integer := 32;
+        FIFO_DEPTH: integer := 4; 
+        CREDIT_COUNTER_LENGTH : integer := 2;        
         current_address : integer := 0;
         Rxy_rst  : integer := 10;
         Cx_rst : integer := 10;
@@ -39,7 +39,6 @@ architecture behavior of router_credit_based is
 
     signal FIFO_D_out_N, FIFO_D_out_E, FIFO_D_out_W, FIFO_D_out_S, FIFO_D_out_L: std_logic_vector(DATA_WIDTH-1 downto 0);
 
-
     signal Grant_NN, Grant_NE, Grant_NW, Grant_NS, Grant_NL: std_logic;
     signal Grant_EN, Grant_EE, Grant_EW, Grant_ES, Grant_EL: std_logic;
     signal Grant_WN, Grant_WE, Grant_WW, Grant_WS, Grant_WL: std_logic;
@@ -55,36 +54,38 @@ architecture behavior of router_credit_based is
     signal empty_N, empty_E, empty_W, empty_S, empty_L: std_logic;
 
     signal Xbar_sel_N, Xbar_sel_E, Xbar_sel_W, Xbar_sel_S, Xbar_sel_L: std_logic_vector(4 downto 0);
+
 begin
+
 ------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------
 -- all the FIFOs
 FIFO_N: FIFO_credit_based
-    generic map ( DATA_WIDTH => DATA_WIDTH)
+    generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH) 
     port map ( reset => reset, clk => clk, RX => RX_N, valid_in => valid_in_N,
             read_en_N => '0', read_en_E =>Grant_EN, read_en_W =>Grant_WN, read_en_S =>Grant_SN, read_en_L =>Grant_LN,
             credit_out => credit_out_N, empty_out => empty_N, Data_out => FIFO_D_out_N);
 
 FIFO_E: FIFO_credit_based
-    generic map ( DATA_WIDTH => DATA_WIDTH)
+    generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
     port map ( reset => reset, clk => clk, RX => RX_E, valid_in => valid_in_E,
             read_en_N => Grant_NE, read_en_E =>'0', read_en_W =>Grant_WE, read_en_S =>Grant_SE, read_en_L =>Grant_LE,
             credit_out => credit_out_E, empty_out => empty_E, Data_out => FIFO_D_out_E);
 
 FIFO_W: FIFO_credit_based
-    generic map ( DATA_WIDTH => DATA_WIDTH)
+    generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
     port map ( reset => reset, clk => clk, RX => RX_W, valid_in => valid_in_W,
             read_en_N => Grant_NW, read_en_E =>Grant_EW, read_en_W =>'0', read_en_S =>Grant_SW, read_en_L =>Grant_LW,
             credit_out => credit_out_W, empty_out => empty_W, Data_out => FIFO_D_out_W);
 
 FIFO_S: FIFO_credit_based
-    generic map ( DATA_WIDTH => DATA_WIDTH)
+    generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
     port map ( reset => reset, clk => clk, RX => RX_S, valid_in => valid_in_S,
             read_en_N => Grant_NS, read_en_E =>Grant_ES, read_en_W =>Grant_WS, read_en_S =>'0', read_en_L =>Grant_LS,
             credit_out => credit_out_S, empty_out => empty_S, Data_out => FIFO_D_out_S);
 
 FIFO_L: FIFO_credit_based
-    generic map ( DATA_WIDTH => DATA_WIDTH)
+    generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
     port map ( reset => reset, clk => clk, RX => RX_L, valid_in => valid_in_L,
             read_en_N => Grant_NL, read_en_E =>Grant_EL, read_en_W =>Grant_WL, read_en_S => Grant_SL, read_en_L =>'0',
             credit_out => credit_out_L, empty_out => empty_L, Data_out => FIFO_D_out_L);
@@ -147,7 +148,9 @@ LBDR_L: LBDR generic map (Rxy_rst => Rxy_rst, Cx_rst => Cx_rst)
 
 -- switch allocator
 
-allocator_unit: allocator port map ( reset => reset, clk => clk,
+allocator_unit: allocator 
+            generic map (FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
+            port map ( reset => reset, clk => clk,
             -- flow control
             credit_in_N => credit_in_N, credit_in_E => credit_in_E, credit_in_W => credit_in_W, credit_in_S => credit_in_S, credit_in_L => credit_in_L,
 
@@ -157,6 +160,7 @@ allocator_unit: allocator port map ( reset => reset, clk => clk,
             req_W_N => Req_WN, req_W_E => Req_WE, req_W_W => '0', req_W_S => Req_WS, req_W_L => Req_WL,
             req_S_N => Req_SN, req_S_E => Req_SE, req_S_W => Req_SW, req_S_S => '0', req_S_L => Req_SL,
             req_L_N => Req_LN, req_L_E => Req_LE, req_L_W => Req_LW, req_L_S => Req_LS, req_L_L => '0',
+            
             empty_N => empty_N, empty_E => empty_E, empty_w => empty_W, empty_S => empty_S, empty_L => empty_L,
             valid_N => valid_out_N, valid_E => valid_out_E, valid_W => valid_out_W, valid_S => valid_out_S, valid_L => valid_out_L,
             -- grant_X_Y means the grant for X output port towards Y input port

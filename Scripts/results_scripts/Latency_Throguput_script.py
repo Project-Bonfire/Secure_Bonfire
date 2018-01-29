@@ -18,6 +18,7 @@ clock_duration = 10.0 #ns
 # this is the depth of the NI FIFO. for better results
 # increase it to 128 or higher
 NI_depth = 32
+fifo_depth = 4
 
 latency_result_file = f = open('latency_result.txt', 'w')
 throughput_result_file = f = open('throughput_result.txt', 'w')
@@ -41,7 +42,7 @@ for network_size in noc_size_list:
         latency_result_file.write('%3s' % str(packet_size)+"| ")
         throughput_result_file.write('%3s' % str(packet_size)+"| ")
         for PIR in pir_list:
-            command = 'python ../../simulate.py -D '+str(network_size)+' -NI '+str(NI_depth)+' -Rand '+str(PIR)+' -PS '+str(packet_size)+" "+str(packet_size)+' -sim 50000 -end 62000 -lat'
+            command = 'python ../../simulate.py -D '+str(network_size)+' -DW 32 -FIFOD '+str(fifo_depth)+' -NI '+str(NI_depth)+' -Rand '+str(PIR)+' -PS '+str(packet_size)+" "+str(packet_size)+' -sim 50000 -end 62000 -lat'
             os.system(command)
             os.system('cp ../../tmp/simul_temp/latency.txt .')
             f = open('latency.txt', 'r')

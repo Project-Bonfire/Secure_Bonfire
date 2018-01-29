@@ -39,6 +39,7 @@ def gen_network_and_tb(program_argv, flow_control_type):
     net_tb_gen_command = "python " + SCRIPTS_DIR + "/NoC_and_TB_gen" \
         + "/" + NET_TB_GEN_SCRIPT + "_" + flow_control_type + ".py" \
         + " -D " + str(program_argv['network_dime_x']) + " " + str(program_argv['network_dime_y']) \
+        + " -FIFOD " + str(program_argv['fifo_depth']) \
         + (" -Rand " + str(program_argv['rand']) if program_argv['rand'] != -1 else "") \
         + (" -VC " if program_argv['vc'] else "") \
         + (" -NI "+str(program_argv['NI_depth']) if program_argv['NI'] else "") \

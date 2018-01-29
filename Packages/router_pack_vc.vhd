@@ -24,8 +24,9 @@ package router_pack is
 
   COMPONENT FIFO_credit_based is
       generic (
-          DATA_WIDTH: integer := 32
-      );
+        DATA_WIDTH: integer := 32;
+        FIFO_DEPTH: integer := 4 -- FIFO counter size for read and write pointers would also be the same as FIFO depth, because of one-hot encoding of them!
+    );
       port (  reset: in  std_logic;
               clk: in  std_logic;
               RX: in std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -58,7 +59,10 @@ package router_pack is
 
 
   COMPONENT allocator is
-
+    generic (
+        FIFO_DEPTH: integer := 4; 
+        CREDIT_COUNTER_LENGTH: integer := 4
+    );
     port (  reset: in  std_logic;
             clk: in  std_logic;
             -- flow control
@@ -136,10 +140,12 @@ end COMPONENT;
   end COMPONENT;
 
   COMPONENT NI_vc is
-     generic(current_x : integer := 10; 	-- the current node's x
+     generic(FIFO_DEPTH: in integer := 4;
+             CREDIT_COUNTER_LENGTH: in integer := 2;    
+             current_x : integer := 10; 	-- the current node's x
              current_y : integer := 10; 	-- the current node's y
-             network_x : integer := 4 ;
-             NI_depth : integer := 32;
+             network_x : integer := 4;    -- the number of nodes along x direction in the NoC             
+             NI_depth : integer := 32;    -- The depth of NI's FIFO in terms of flit slots
              NI_couter_size: integer:= 5; -- should be set to log2 of NI_depth
              reserved_address : std_logic_vector(29 downto 0)    := "000000000000000001111111111110"; -- NI's memory mapped reserved VC_0
              reserved_address_vc : std_logic_vector(29 downto 0) := "000000000000000001111111111111"; -- NI's memory mapped reserved for VC_1

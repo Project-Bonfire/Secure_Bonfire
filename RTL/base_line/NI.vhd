@@ -16,12 +16,13 @@ use ieee.std_logic_unsigned.all;
 use IEEE.NUMERIC_STD.all;
 use ieee.std_logic_textio.all;
 use std.textio.all;
-
 use ieee.std_logic_misc.all;
 
 
 entity NI is
-   generic(current_x : integer := 10; 	-- the current node's x
+   generic(FIFO_DEPTH: in integer := 4;
+           CREDIT_COUNTER_LENGTH: in integer := 2;
+           current_x : integer := 10; 	-- the current node's x
            current_y : integer := 10; 	-- the current node's y
            network_x : integer := 4 ;
            NI_depth : integer := 32;
@@ -71,7 +72,7 @@ architecture logic of NI is
   signal P2N_full, P2N_empty: std_logic;
 
 
-  signal credit_counter_in, credit_counter_out: std_logic_vector(1 downto 0);
+  signal credit_counter_in, credit_counter_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal packet_counter_in, packet_counter_out: std_logic_vector(13 downto 0);
   signal packet_length_counter_in, packet_length_counter_out: std_logic_vector(13 downto 0);
   signal grant : std_logic;
@@ -107,6 +108,9 @@ architecture logic of NI is
   signal Rec_Packet_ID, Rec_Packet_ID_in                      : std_logic_vector(13 downto 0);
   signal Rec_Packet_Lenght, Rec_Packet_Lenght_in              : std_logic_vector(13 downto 0);
 
+  constant max_credit_counter_value: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := std_logic_vector(to_unsigned(FIFO_DEPTH-1, CREDIT_COUNTER_LENGTH));
+  constant all_zeros: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := (others => '0');
+
 begin
 
 Clk_proc: process(clk, enable, write_byte_enable) begin
@@ -116,7 +120,7 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       P2N_FIFO_read_pointer  <= (others=>'0');
       P2N_FIFO_write_pointer <= (others=>'0');
       P2N_FIFO  <= (others => (others=>'0'));
-      credit_counter_out <= "11";
+      credit_counter_out <= max_credit_counter_value;
       packet_length_counter_out <= "00000000000000";
       packetizer_state <= IDLE;
       packet_counter_out <= "00000000000000";
@@ -262,7 +266,7 @@ credit_counter_update: process (credit_in, credit_counter_out, grant)begin
     credit_counter_in <= credit_counter_out;
     if credit_in = '1' and grant = '1' then
          credit_counter_in <= credit_counter_out;
-    elsif credit_in = '1'  and credit_counter_out < 3 then
+    elsif credit_in = '1'  and credit_counter_out < max_credit_counter_value then
          credit_counter_in <= credit_counter_out + 1;
     elsif grant = '1' and credit_counter_out > 0 then
          credit_counter_in <= credit_counter_out - 1;
@@ -288,7 +292,7 @@ Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_lengt
                 end if;
 
             when HEADER_FLIT =>
-                if credit_counter_out /= "00" and P2N_empty = '0' then
+                if credit_counter_out /= all_zeros and P2N_empty = '0' then
                     grant <= '1';
                     --FIFO_Data_out(19 downto 0) contains the following: Destination Y- 4 bits, Destination X-4 bits, Mem_address_1 12bit
                     TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
@@ -297,7 +301,7 @@ Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_lengt
                     packetizer_state_in <= HEADER_FLIT;
                 end if;
             when BODY_FLIT_1 =>
-                      if credit_counter_out /= "00" and P2N_empty = '0'then
+                      if credit_counter_out /= all_zeros and P2N_empty = '0'then
                         grant <= '1';
                         TX <=  "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE( "010" & FIFO_Data_out(27 downto 0));
                         packetizer_state_in <= BODY_FLIT_2;
@@ -306,7 +310,7 @@ Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_lengt
                       end if;
 
             when BODY_FLIT_2 =>
-                  if credit_counter_out /= "00" and P2N_empty = '0'then
+                  if credit_counter_out /= all_zeros and P2N_empty = '0'then
                     packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-3;
                     grant <= '1';
                     -- FIFO_Data_out(27 downto 14) contains the packet length
@@ -318,7 +322,7 @@ Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_lengt
                   end if;
 
             when BODY_FLIT =>
-                if credit_counter_out /= "00" and P2N_empty = '0'then
+                if credit_counter_out /= all_zeros and P2N_empty = '0'then
                     grant <= '1';
                     TX <= "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("010" & FIFO_Data_out(27 downto 0));
                     packet_length_counter_in <= packet_length_counter_out - 1;
@@ -333,7 +337,7 @@ Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_lengt
                 end if;
 
             when TAIL_FLIT =>
-                if credit_counter_out /= "00" and P2N_empty = '0' then
+                if credit_counter_out /= all_zeros and P2N_empty = '0' then
                     grant <= '1';
                     packet_length_counter_in <= packet_length_counter_out - 1;
                     TX <= "100" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("100" & FIFO_Data_out(27 downto 0));

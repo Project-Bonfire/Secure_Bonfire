@@ -20,9 +20,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package router_pack is
+
     COMPONENT FIFO_credit_based
   generic (
-        DATA_WIDTH: integer := 32
+        DATA_WIDTH: integer := 32;
+        FIFO_DEPTH: integer := 4 -- FIFO counter size for read and write pointers would also be the same as FIFO depth, because of one-hot encoding of them!
     );
     port (  reset: in  std_logic;
             clk: in  std_logic;
@@ -40,7 +42,10 @@ package router_pack is
   end COMPONENT;
 
   COMPONENT allocator is
-
+    generic (
+        FIFO_DEPTH: integer := 4; 
+        CREDIT_COUNTER_LENGTH: integer := 4
+    );
     port (  reset: in  std_logic;
             clk: in  std_logic;
             -- flow control
@@ -97,7 +102,9 @@ end COMPONENT;
   end COMPONENT;
 
   component NI is
-   generic(current_x : integer := 10; 	-- the current node's x
+   generic(FIFO_DEPTH: in integer := 4;
+           CREDIT_COUNTER_LENGTH: in integer := 2;  
+           current_x : integer := 10; 	-- the current node's x
            current_y : integer := 10; 	-- the current node's y
            network_x : integer := 4 ;
            NI_depth : integer := 32;

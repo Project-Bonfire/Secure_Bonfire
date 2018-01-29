@@ -46,7 +46,7 @@ generate_ascii_art(noc_file, CB_Package.network_dime_x, CB_Package.network_dime_
 
 
 noc_file.write("begin\n\n\n")
-instantiate_routers(noc_file, CB_Package.network_dime_x, CB_Package.network_dime_y, CB_Package.vc)
+instantiate_routers(noc_file, CB_Package.network_dime_x, CB_Package.network_dime_y, CB_Package.vc, CB_Package.fifo_depth)
 
 
 noc_file.write("---------------------------------------------------------------\n")
@@ -99,8 +99,7 @@ for i in range(0, CB_Package.network_dime_x*CB_Package.network_dime_y):
     node_y = i / CB_Package.network_dime_x
 
     if node_y != CB_Package.network_dime_y-1:
-        noc_file.write("-- connecting router: "+str(i)+" to router: " +
-                       str(i+CB_Package.network_dime_x)+" and vice versa\n")
+        noc_file.write("-- connecting router: "+str(i)+" to router: " + str(i+CB_Package.network_dime_x)+" and vice versa\n")
         noc_file.write("valid_in_N_"+str(i+CB_Package.network_dime_x)+" <= valid_out_S_"+str(i)+";\n")
         noc_file.write("valid_in_S_"+str(i)+" <= valid_out_N_"+str(i+CB_Package.network_dime_x)+";\n")
         noc_file.write("credit_in_S_"+str(i)+" <= credit_out_N_"+str(i+CB_Package.network_dime_x)+";\n")

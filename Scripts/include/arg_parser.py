@@ -22,6 +22,7 @@ def arg_parser(argv, program_argv, logging):
 
     program_argv['network_dime_x'] = 4
     program_argv['network_dime_y'] = 4
+    program_argv['fifo_depth'] = 4
     program_argv['vc'] = False
     program_argv['NI'] = False
     program_argv['NI_depth'] = 0
@@ -41,6 +42,9 @@ def arg_parser(argv, program_argv, logging):
     if '-NI' in argv[1:]:
         program_argv['NI'] = True
         program_argv['NI_depth'] = int(argv[argv.index('-NI')+1])
+
+    if '-FIFOD' in argv[1:]:
+        program_argv['fifo_depth'] = int(argv[argv.index('-FIFOD')+1])
 
     if '-vc' in argv[1:]:
         program_argv['vc'] = True

@@ -5,10 +5,13 @@ use ieee.std_logic_1164.all;
 
 -- Is this like the old arbiter in the router with handshaking FC ??
 entity arbiter_in is
+  generic (
+        CREDIT_COUNTER_LENGTH: integer := 4 
+    );
     port (  reset: in  std_logic;
             clk: in  std_logic;
             Req_X_N, Req_X_E, Req_X_W, Req_X_S, Req_X_L:in std_logic; -- From LBDR modules
-            credit_counter_N, credit_counter_E, credit_counter_W, credit_counter_S: in std_logic_vector (1 downto 0);
+            credit_counter_N, credit_counter_E, credit_counter_W, credit_counter_S: in std_logic_vector (CREDIT_COUNTER_LENGTH-1 downto 0);
             X_N, X_E, X_W, X_S, X_L:out std_logic -- Grants given to LBDR requests (encoded as one-hot)
             );
 end;
@@ -19,7 +22,7 @@ architecture behavior of arbiter_in is
  TYPE STATE_TYPE IS (IDLE, North, East, West, South, Local);
  TYPE DIRECTION is (N, E, W, S, Invalid);
  SIGNAL state, state_in   : STATE_TYPE := IDLE;
- SIGNAL Free_Slots_N, Free_Slots_E, Free_Slots_W, Free_Slots_S, Free_Slots_L : std_logic_vector(2 downto 0) := "000";
+ SIGNAL Free_Slots_N, Free_Slots_E, Free_Slots_W, Free_Slots_S, Free_Slots_L : std_logic_vector(CREDIT_COUNTER_LENGTH downto 0) := (others => '0');
  SIGNAL dir: DIRECTION := N;
 
 begin
@@ -37,11 +40,10 @@ Free_Slots_N <= req_X_N & credit_counter_N;
 Free_Slots_E <= req_X_E & credit_counter_E;
 Free_Slots_W <= req_X_W & credit_counter_W;
 Free_Slots_S <= req_X_S & credit_counter_S;
---Free_Slots_L <= req_X_L & credit_counter_L;
 
 
 process (Free_Slots_N, Free_Slots_E, Free_Slots_W, Free_Slots_S, req_X_N, req_X_E, req_X_W, req_X_S)
-	variable Max_Free_Slots : std_logic_vector (2 downto 0) := Free_Slots_N;
+	variable Max_Free_Slots : std_logic_vector (CREDIT_COUNTER_LENGTH downto 0) := Free_Slots_N;
 begin
 	 dir <= N;
 	 Max_Free_Slots := Free_Slots_N;

@@ -9,7 +9,7 @@ use IEEE.NUMERIC_STD.all;
  use ieee.std_logic_misc.all;
 
 package TB_Package is
-  function CX_GEN(current_address, network_x, network_y : integer) return integer;
+   function CX_GEN(current_address, network_x, network_y : integer) return integer;
 
    procedure NI_control(network_x, network_y, frame_length, current_address, initial_delay, min_packet_size, max_packet_size: in integer;
                       finish_time: in time;
