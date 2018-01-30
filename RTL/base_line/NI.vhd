@@ -70,6 +70,7 @@ architecture logic of NI is
   type MEM is array (0 to NI_depth-1) of std_logic_vector(31 downto 0);
   signal P2N_FIFO, P2N_FIFO_in : MEM;
   signal P2N_full, P2N_empty: std_logic;
+  signal P2N_empty_slots: std_logic_vector(NI_couter_size downto 0);
 
 
   signal credit_counter_in, credit_counter_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
@@ -249,6 +250,14 @@ P2N_wr_enable:process(P2N_full, valid_data) begin
          P2N_write_en <= '0';
      end if;
   end process;
+
+P2N_Empty_slots_proc: process (P2N_FIFO_read_pointer, P2N_FIFO_write_pointer) begin
+  if P2N_FIFO_read_pointer > P2N_FIFO_write_pointer then
+      P2N_empty_slots <= std_logic_vector(to_unsigned(to_integer(unsigned(P2N_FIFO_read_pointer -  P2N_FIFO_write_pointer - 1)), NI_couter_size+1));
+  else
+      P2N_empty_slots <= std_logic_vector(to_unsigned(NI_depth-to_integer(unsigned(P2N_FIFO_write_pointer - P2N_FIFO_read_pointer)), NI_couter_size+1));
+  end if;
+end process;
 
 -- Process for updating full and empty signals
 P2N_Full_Empty:process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
@@ -517,6 +526,10 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
           file_close(RECEIVED_FILE);
 end process;
 
-flag_register_in <= (not(Rec_Valid and not N2P_empty)) & P2N_full & "000000000000000000000000000000";
+flag_register_in(31)<=(not(Rec_Valid and not N2P_empty));
+flag_register_in(30) <= P2N_full;
+flag_register_in(29 downto 29-NI_couter_size) <= P2N_empty_slots;
+flag_register_in(29-NI_couter_size-1 downto 0) <= (others => '0');
+
 irq_out <= '0';
 end; --architecture logic
