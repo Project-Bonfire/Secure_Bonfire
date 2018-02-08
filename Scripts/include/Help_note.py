@@ -22,6 +22,9 @@ def print_help(argv, program_argv):
     print BOLD + "  -NI [NI depth] :" + ENDC
     print "\tAdds NI with designated depth! "
     print
+    print BOLD + "  -APP :" + ENDC
+    print "\tGenerates packets from application files! "
+    print
     print BOLD + OKBLUE + "  Simulation parameters:" + ENDC
     print BOLD + "  -Rand [PIR]:" + ENDC
     print "\tUse Random traffic pattern generator with packet injection rate equal to PIR (value between 0 and 1)."
@@ -71,3 +74,12 @@ def print_help(argv, program_argv):
     print "\t\tdetails: runs a 4x4 network with virtual channels packet injection rate of 0.01 and "
     print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
     print "\t\t         simulation will stop at 12000 ns."
+    print BOLD + "  Example 3:" + ENDC
+    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -vc -Rand 0.05 -PS 8 8 -sim 10000 -end 12000"
+    print "\t\tdetails: runs a 4x4 network with virtual channels packet injection rate of 0.01 and "
+    print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
+    print "\t\t         simulation will stop at 12000 ns."
+    print BOLD + "  Example 4:" + ENDC
+    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -sim 10000 -end 12000 -NI 32 -APP"
+    print "\t\tdetails: runs a 4x4 network with no virtual channels. The packets would be generated based on application files"
+    print "\t\t         the injection of packets would stop at 10000 ns and simulation will stop at 12000 ns."

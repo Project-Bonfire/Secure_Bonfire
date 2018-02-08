@@ -20,6 +20,8 @@ add_NI = False
 NI_depth = 0
 vc = False
 add_APP = False
+frame_size = 0
+
 
 if '-D'  in sys.argv[1:]:
   network_dime_x = int(sys.argv[sys.argv.index('-D')+1])

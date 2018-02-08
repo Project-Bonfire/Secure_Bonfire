@@ -97,7 +97,7 @@ package body TB_Package is
     -- sending variables
     variable send_destination_node, send_counter, send_id_counter: integer:= 0;
     variable send_packet_length: integer:= 8;
-    variable Mem_address_1, Mem_address2, RW, DI, ROLE, OPCODE: integer := 0;
+    variable Mem_address_1, Mem_address_2, RW, DI, ROLE, OPCODE: integer := 0;
     type state_type is (Idle, Header_flit, Body_flit, Body_flit_1, Tail_flit);
     variable  state : state_type;
 
@@ -194,7 +194,7 @@ package body TB_Package is
                           ROLE := 1;
                         end if;
                         uniform(seed1, seed2, rand);
-                        Mem_address2 := integer(rand*real(MaxMemoryAddress2));
+                        Mem_address_2 := integer(rand*real(MaxMemoryAddress2));
 
                       -- this is the header flit
                       packet_gen_time :=  now;
@@ -203,7 +203,7 @@ package body TB_Package is
                       data_write <= "0000" &  std_logic_vector(to_unsigned(current_address/network_x, 4)) & std_logic_vector(to_unsigned(current_address mod network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1, 12));
                       write(SEND_LINEVARIABLE, "Packet generated at " & time'image(packet_gen_time) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) &
                             " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1)&
-                            " Mem_address_2: " & integer'image(Mem_address2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
+                            " Mem_address_2: " & integer'image(Mem_address_2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
                       writeline(SEND_FILE, SEND_LINEVARIABLE);
                     else
                       state :=  Idle;
@@ -212,7 +212,7 @@ package body TB_Package is
                     -- first body flit
                     address <= reserved_address;
                     write_byte_enable <= "1111";
-                    data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
+                    data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address_2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
                     send_counter := send_counter+1;
                     state :=  Body_flit_1;
 
@@ -277,7 +277,7 @@ package body TB_Package is
               read (APP_LINEVARIABLE, packet_info);
               ROLE := integer(packet_info);
               read (APP_LINEVARIABLE, packet_info);
-              Mem_address2 := integer(packet_info);
+              Mem_address_2 := integer(packet_info);
               sent := False;
             end if;
 
@@ -291,12 +291,12 @@ package body TB_Package is
                 data_write <= "0000" &  std_logic_vector(to_unsigned(current_address/network_x, 4)) & std_logic_vector(to_unsigned(current_address mod network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1, 12));
                 write(SEND_LINEVARIABLE, "Packet generated at " & time'image(packet_gen_time) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) &
                       " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1)&
-                      " Mem_address_2: " & integer'image(Mem_address2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
+                      " Mem_address_2: " & integer'image(Mem_address_2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
                 writeline(SEND_FILE, SEND_LINEVARIABLE);
             elsif state = Header_flit then
                 address <= reserved_address;
                 write_byte_enable <= "1111";
-                data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
+                data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address_2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
                 send_counter := send_counter+1;
                 state :=  Body_flit_1;
             elsif state = Body_flit_1 then
