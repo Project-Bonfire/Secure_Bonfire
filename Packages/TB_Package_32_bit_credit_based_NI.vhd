@@ -13,6 +13,7 @@ package TB_Package is
 
    procedure NI_control(network_x, network_y, frame_length, current_address, initial_delay, min_packet_size, max_packet_size: in integer;
                       finish_time: in time;
+                      APP_FILE_NAME: in string;
                       signal clk:                      in std_logic;
                       -- NI configuration
                       signal reserved_address :        in std_logic_vector(29 downto 0);
@@ -65,6 +66,7 @@ package body TB_Package is
 
   procedure NI_control(network_x, network_y, frame_length, current_address, initial_delay, min_packet_size, max_packet_size: in integer;
                       finish_time: in time;
+                      APP_FILE_NAME: in string;
                       signal clk:                      in std_logic;
                       -- NI configuration
                       signal reserved_address :        in std_logic_vector(29 downto 0);
@@ -77,7 +79,7 @@ package body TB_Package is
                       signal address:                  out std_logic_vector(31 downto 2);
                       signal data_write:               out std_logic_vector(31 downto 0);
                       signal data_read:                in std_logic_vector(31 downto 0);
-                      signal test:                out std_logic_vector(31 downto 0)) is
+                      signal test:                     out std_logic_vector(31 downto 0)) is
     -- variables for random functions
     constant DATA_WIDTH : integer := 32;
     variable seed1 :positive := current_address+1;
@@ -87,9 +89,10 @@ package body TB_Package is
     variable SEND_LINEVARIABLE : line;
     file SEND_FILE : text;
 
-
-
-
+    variable APP_LINEVARIABLE : line;
+    file APP_FILE : text;
+    variable packet_info : integer;
+    variable gen_time: time;
 
     -- sending variables
     variable send_destination_node, send_counter, send_id_counter: integer:= 0;
@@ -100,12 +103,19 @@ package body TB_Package is
 
     variable  frame_starting_delay : integer:= 0;
     variable frame_counter: integer:= 0;
-    variable first_packet : boolean := True;
     variable packet_gen_time: time;
+    variable sent: boolean := True;
+
     begin
 
 
     file_open(SEND_FILE,"sent.txt",WRITE_MODE);
+
+    if APP_FILE_NAME = "NONE" then
+      report "no app file given!";
+    else
+      file_open(APP_FILE, APP_FILE_NAME, READ_MODE);
+    end if;
 
     enable <= '1';
     state :=  Idle;
@@ -134,135 +144,197 @@ package body TB_Package is
       --       .-------------------------------------------------.
       --       | N2P_empty | P2N_full |                       ...|
       --       '-------------------------------------------------'
+
       if data_read(31) = '0' then  -- N2P is not empty, can receive flit
-          -- read the received data status
-          address <= counter_address;
-          write_byte_enable <= "0000";
-          wait until clk'event and clk ='0';
-
-
           -- read the received data status
           address <= reserved_address;
           write_byte_enable <= "0000";
           wait until clk'event and clk ='0';
 
       elsif data_read(30) = '0' then -- P2N is not full, can send flit
-          if frame_counter >= frame_starting_delay  then
-
-              if state = Idle and now  < finish_time then
-                  if frame_counter < frame_starting_delay+1 then
-
-                    state :=  Header_flit;
-                    send_counter := send_counter+1;
-                    -- generating the destination address
-                    uniform(seed1, seed2, rand);
-                    send_destination_node := integer(rand*real((network_x*network_y)-1));
-                    while (send_destination_node = current_address) loop
+          if APP_FILE_NAME = "NONE" then
+            if frame_counter >= frame_starting_delay  then
+                if state = Idle and now  < finish_time then
+                    if frame_counter < frame_starting_delay+1 then
+                      state :=  Header_flit;
+                      send_counter := send_counter+1;
+                        -- generating the destination address
                         uniform(seed1, seed2, rand);
                         send_destination_node := integer(rand*real((network_x*network_y)-1));
-                    end loop;
-                    --generating the packet length
-                    uniform(seed1, seed2, rand);
-                    send_packet_length := integer((integer(rand*100.0)*frame_length)/300);
-                    if (send_packet_length < min_packet_size) then
-                        send_packet_length:=min_packet_size;
+                        while (send_destination_node = current_address) loop
+                            uniform(seed1, seed2, rand);
+                            send_destination_node := integer(rand*real((network_x*network_y)-1));
+                        end loop;
+                        --generating the packet length
+                        uniform(seed1, seed2, rand);
+                        send_packet_length := integer((integer(rand*100.0)*frame_length)/300);
+                        if (send_packet_length < min_packet_size) then
+                            send_packet_length:=min_packet_size;
+                        end if;
+                        if (send_packet_length > max_packet_size) then
+                            send_packet_length:=max_packet_size;
+                        end if;
+                        uniform(seed1, seed2, rand);
+                        Mem_address_1:= integer(rand*real(MaxMemoryAddress1));
+
+                        -- this is body 1
+                        uniform(seed1, seed2, rand);
+                        RW := integer(rand*real(2));
+                        if RW > 1 then
+                          RW := 1;
+                        end if;
+                        uniform(seed1, seed2, rand);
+                        DI := integer(rand*real(2));
+                        if DI > 1 then
+                          DI := 1;
+                        end if;
+                        uniform(seed1, seed2, rand);
+                        ROLE := integer(rand*real(2));
+                        if ROLE > 1 then
+                          ROLE := 1;
+                        end if;
+                        uniform(seed1, seed2, rand);
+                        Mem_address2 := integer(rand*real(MaxMemoryAddress2));
+
+                      -- this is the header flit
+                      packet_gen_time :=  now;
+                      address <= reserved_address;
+                      write_byte_enable <= "1111";
+                      data_write <= "0000" &  std_logic_vector(to_unsigned(current_address/network_x, 4)) & std_logic_vector(to_unsigned(current_address mod network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1, 12));
+                      write(SEND_LINEVARIABLE, "Packet generated at " & time'image(packet_gen_time) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) &
+                            " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1)&
+                            " Mem_address_2: " & integer'image(Mem_address2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
+                      writeline(SEND_FILE, SEND_LINEVARIABLE);
+                    else
+                      state :=  Idle;
                     end if;
-                    if (send_packet_length > max_packet_size) then
-                        send_packet_length:=max_packet_size;
-                    end if;
-                    uniform(seed1, seed2, rand);
-                    Mem_address_1:= integer(rand*real(MaxMemoryAddress1));
-                    -- this is the header flit
+                elsif state = Header_flit then
+                    -- first body flit
                     address <= reserved_address;
                     write_byte_enable <= "1111";
-                    packet_gen_time :=  now;
-                    data_write <= "0000" &  std_logic_vector(to_unsigned(current_address/network_x, 4)) & std_logic_vector(to_unsigned(current_address mod network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1, 12));
+                    data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
+                    send_counter := send_counter+1;
+                    state :=  Body_flit_1;
 
-                  else
-                    state :=  Idle;
-                  end if;
-              elsif state = Header_flit then
-                  -- first body flit
-                  address <= reserved_address;
-                  write_byte_enable <= "1111";
-                  -- this is body 1
-                  uniform(seed1, seed2, rand);
-                  RW := integer(rand*real(2));
-                  if RW > 1 then
-                    RW := 1;
-                  end if;
-                  uniform(seed1, seed2, rand);
-                  DI := integer(rand*real(2));
-                  if DI > 1 then
-                    DI := 1;
-                  end if;
-                  uniform(seed1, seed2, rand);
-                  ROLE := integer(rand*real(2));
-                  if ROLE > 1 then
-                    ROLE := 1;
-                  end if;
-                  uniform(seed1, seed2, rand);
-                  Mem_address2 := integer(rand*real(MaxMemoryAddress2));
-                  data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
-                  write(SEND_LINEVARIABLE, "Packet generated at " & time'image(packet_gen_time) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) &
-                        " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1)&
-                        " Mem_address_2: " & integer'image(Mem_address2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
-                  writeline(SEND_FILE, SEND_LINEVARIABLE);
-                  send_counter := send_counter+1;
-                  state :=  Body_flit_1;
-
-              elsif state = Body_flit_1 then
-                  -- the 2nd body flit
-                  address <= reserved_address;
-                  write_byte_enable <= "1111";
-                  uniform(seed1, seed2, rand);
-                  data_write <= "0000" &  std_logic_vector(to_unsigned(send_packet_length, 14)) & std_logic_vector(to_unsigned(send_id_counter, 14));
-                  send_counter := send_counter+1;
-                  if send_counter = send_packet_length-1 then
-                      state :=  Tail_flit;
-                  else
-                      state :=  Body_flit;
-                  end if;
-              elsif state = Body_flit then
-                  -- rest of body flits
-                  address <= reserved_address;
-                  write_byte_enable <= "1111";
-                  uniform(seed1, seed2, rand);
-                  data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
-                  send_counter := send_counter+1;
-                  if send_counter = send_packet_length-1 then
-                      state :=  Tail_flit;
-                  else
-                      state :=  Body_flit;
-                  end if;
-              elsif state = Tail_flit then
-                  -- tail flit
-                  address <= reserved_address;
-                  write_byte_enable <= "1111";
-                  if first_packet = True then
-                    data_write <= "0000" & "0000000000000000000000000000";
-                    first_packet := False;
-                  else
-                    uniform(seed1, seed2, rand);
+                elsif state = Body_flit_1 then
+                    -- the 2nd body flit
+                    address <= reserved_address;
+                    write_byte_enable <= "1111";
+                    data_write <= "0000" &  std_logic_vector(to_unsigned(send_packet_length, 14)) & std_logic_vector(to_unsigned(send_id_counter, 14));
+                    send_counter := send_counter+1;
+                    if send_counter = send_packet_length-1 then
+                        state :=  Tail_flit;
+                    else
+                        state :=  Body_flit;
+                    end if;
+                elsif state = Body_flit then
+                    -- rest of body flits
+                    address <= reserved_address;
+                    write_byte_enable <= "1111";
                     data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
-                  end if;
-                  send_counter := 0;
-                  state :=  Idle;
-                  send_id_counter := send_id_counter + 1;
-                  if send_id_counter = 16384 then
-                    send_id_counter := 0;
-                  end if;
+                    send_counter := send_counter+1;
+                    if send_counter = send_packet_length-1 then
+                        state :=  Tail_flit;
+                    else
+                        state :=  Body_flit;
+                    end if;
+                elsif state = Tail_flit then
+                    -- tail flit
+                    address <= reserved_address;
+                    write_byte_enable <= "1111";
+                    data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
+                    send_counter := 0;
+                    state :=  Idle;
+                    send_id_counter := send_id_counter + 1;
+                    if send_id_counter = 16384 then
+                      send_id_counter := 0;
+                    end if;
+                end if;
+              end if;
+
+              frame_counter := frame_counter + 1;
+              if frame_counter = frame_length then
+                  frame_counter := 0;
+                  uniform(seed1, seed2, rand);
+                  frame_starting_delay := integer(((integer(rand*100.0)*(frame_length - max_packet_size)))/100);
+              end if;
+          ----------------------------------------------------------------------------
+          -- Reading from file
+          else
+            if sent = True and not endfile(APP_FILE) then
+              readline (APP_FILE, APP_LINEVARIABLE);
+              read (APP_LINEVARIABLE, gen_time);
+              read (APP_LINEVARIABLE, packet_info);
+              send_destination_node := integer(packet_info);
+              read (APP_LINEVARIABLE, packet_info);
+              send_packet_length := integer(packet_info);
+              read (APP_LINEVARIABLE, packet_info);
+              Mem_address_1 := integer(packet_info);
+              read (APP_LINEVARIABLE, packet_info);
+              RW := integer(packet_info);
+              read (APP_LINEVARIABLE, packet_info);
+              DI := integer(packet_info);
+              read (APP_LINEVARIABLE, packet_info);
+              ROLE := integer(packet_info);
+              read (APP_LINEVARIABLE, packet_info);
+              Mem_address2 := integer(packet_info);
+              sent := False;
+            end if;
+
+            --if state = Idle and now  < finish_time and sent = False then
+            if state = Idle and now >= gen_time and sent = False then
+                send_counter := send_counter+1;
+                state :=  Header_flit;
+                address <= reserved_address;
+                write_byte_enable <= "1111";
+                packet_gen_time :=  now;
+                data_write <= "0000" &  std_logic_vector(to_unsigned(current_address/network_x, 4)) & std_logic_vector(to_unsigned(current_address mod network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node/network_x, 4)) & std_logic_vector(to_unsigned(send_destination_node mod network_x, 4))&std_logic_vector(to_unsigned(Mem_address_1, 12));
+                write(SEND_LINEVARIABLE, "Packet generated at " & time'image(packet_gen_time) & " From " & integer'image(current_address) & " to " & integer'image(send_destination_node) &
+                      " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1)&
+                      " Mem_address_2: " & integer'image(Mem_address2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
+                writeline(SEND_FILE, SEND_LINEVARIABLE);
+            elsif state = Header_flit then
+                address <= reserved_address;
+                write_byte_enable <= "1111";
+                data_write <= "0000" &  std_logic_vector(to_unsigned(Mem_address2, 20)) & std_logic_vector(to_unsigned(RW,1)) & std_logic_vector(to_unsigned(DI,1)) & std_logic_vector(to_unsigned(ROLE,1)) & std_logic_vector(to_unsigned(OPCODE, 5));
+                send_counter := send_counter+1;
+                state :=  Body_flit_1;
+            elsif state = Body_flit_1 then
+                address <= reserved_address;
+                write_byte_enable <= "1111";
+                data_write <= "0000" &  std_logic_vector(to_unsigned(send_packet_length, 14)) & std_logic_vector(to_unsigned(send_id_counter, 14));
+                send_counter := send_counter+1;
+                if send_counter = send_packet_length-1 then
+                    state :=  Tail_flit;
+                else
+                    state :=  Body_flit;
+                end if;
+            elsif state = Body_flit then
+              address <= reserved_address;
+              write_byte_enable <= "1111";
+              data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
+              send_counter := send_counter+1;
+              if send_counter = send_packet_length-1 then
+                  state :=  Tail_flit;
+              else
+                  state :=  Body_flit;
+              end if;
+            elsif state = Tail_flit then
+              send_counter := 0;
+              sent := True;
+              state :=  Idle;
+              address <= reserved_address;
+              write_byte_enable <= "1111";
+              data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
+              send_id_counter := send_id_counter + 1;
+              if send_id_counter = 16384 then
+                send_id_counter := 0;
               end if;
             end if;
 
-            frame_counter := frame_counter + 1;
-            if frame_counter = frame_length then
-                frame_counter := 0;
-                uniform(seed1, seed2, rand);
-                frame_starting_delay := integer(((integer(rand*100.0)*(frame_length - max_packet_size)))/100);
-            end if;
+          end if;
 
-            wait until clk'event and clk ='0';
+          wait until clk'event and clk ='0';
 
       end if;
 

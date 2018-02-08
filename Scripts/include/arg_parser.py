@@ -24,6 +24,7 @@ def arg_parser(argv, program_argv, logging):
     program_argv['network_dime_y'] = 4
     program_argv['fifo_depth'] = 4
     program_argv['vc'] = False
+    program_argv['app'] = False
     program_argv['NI'] = False
     program_argv['NI_depth'] = 0
     program_argv['lat'] = False
@@ -38,6 +39,9 @@ def arg_parser(argv, program_argv, logging):
 
     if '-lat' in argv[1:]:
         program_argv['lat'] = True
+
+    if '-APP' in argv[1:]:
+        program_argv['app'] = True
 
     if '-NI' in argv[1:]:
         program_argv['NI'] = True

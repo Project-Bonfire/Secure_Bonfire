@@ -19,6 +19,7 @@ verbal = False
 add_NI = False
 NI_depth = 0
 vc = False
+add_APP = False
 
 if '-D'  in sys.argv[1:]:
   network_dime_x = int(sys.argv[sys.argv.index('-D')+1])
@@ -57,6 +58,9 @@ if '-sim'  in sys.argv[1:]:
 if '-NI' in sys.argv[1:]:
     add_NI = True
     NI_depth = int(sys.argv[1:][sys.argv[1:].index('-NI')+1])
+
+if '-APP' in sys.argv[1:]:
+    add_APP = True
 
 if '-PS'  in sys.argv[1:]:
   get_packet_size = True
@@ -151,17 +155,7 @@ noc_file.write(string_to_print[:len(string_to_print)-3])
 noc_file.write("\n            ); \n")
 noc_file.write("end component; \n")
 
-noc_file.write("component flit_tracker is\n")
-noc_file.write("    generic (\n")
-noc_file.write("        DATA_WIDTH: integer := 32;\n")
-noc_file.write("        tracker_file: string :=\"track.txt\"\n")
-noc_file.write("    );\n")
-noc_file.write("    port (\n")
-noc_file.write("        clk: in std_logic;\n")
-noc_file.write("        RX: in std_logic_vector (DATA_WIDTH-1 downto 0); \n")
-noc_file.write("        valid_in : in std_logic \n")
-noc_file.write("    );\n")
-noc_file.write("end component;\n")
+
 
 
 noc_file.write("\n")
@@ -241,17 +235,6 @@ noc_file.write("\n")
 
 noc_file.write("-- instantiating the network\n")
 
-noc_file.write("-- instantiating the flit trackers\n")
-for i in range(0, network_dime_x*network_dime_y):
-    noc_file.write("F_T_"+str(i)+"_T: flit_tracker  generic map (\n")
-    noc_file.write("        DATA_WIDTH => "+str(data_width)+", \n")
-    noc_file.write("        tracker_file =>\"traces/track"+str(i)+"_T.txt\"\n")
-    noc_file.write("    )\n")
-    noc_file.write("    port map (\n")
-    noc_file.write("        clk => clk, RX => TX_L_"+str(i)+", \n")
-    noc_file.write("        valid_in => valid_out_L_"+str(i)+"\n")
-    noc_file.write("    );\n")
-
 
 string_to_print = ""
 string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+" generic map (DATA_WIDTH  => "+str(data_width)+", FIFO_DEPTH => "+str(fifo_depth)+", CREDIT_COUNTER_LENGTH => "+str(int(ceil(log(fifo_depth)/log(2))))+")\n"
@@ -317,9 +300,11 @@ if add_NI:
         random_end = sim_finish_time
       else:
         random_end = random.randint(random_start, 200)
-
+      appfile = "\"NONE\""
+      if add_APP:
+          appfile = "\"../../App/app_"+str(node_number)+".txt\""
       # NI_control needs fixing !!!
-      noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, clk,\n")
+      noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, "+appfile+",clk,\n")
       noc_file.write("           -- NI configuration\n")
       if vc:
           noc_file.write("           reserved_address, reserved_address_vc, flag_address, counter_address, reconfiguration_address,\n")
