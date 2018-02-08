@@ -271,13 +271,13 @@ package body TB_Package is
               read (APP_LINEVARIABLE, packet_info);
               Mem_address_1 := integer(packet_info);
               read (APP_LINEVARIABLE, packet_info);
+              Mem_address_2 := integer(packet_info);
+              read (APP_LINEVARIABLE, packet_info);
               RW := integer(packet_info);
               read (APP_LINEVARIABLE, packet_info);
               DI := integer(packet_info);
               read (APP_LINEVARIABLE, packet_info);
               ROLE := integer(packet_info);
-              read (APP_LINEVARIABLE, packet_info);
-              Mem_address_2 := integer(packet_info);
               sent := False;
             end if;
 
