@@ -30,6 +30,7 @@ def arg_parser(argv, program_argv, logging):
     program_argv['lat'] = False
     program_argv['debug'] = False
     program_argv['trace'] = False
+    program_argv['routing'] = 'xy'
 
     if '-D'	in argv[1:]:
         program_argv['network_dime_x'] = int(argv[argv.index('-D')+1])
@@ -49,6 +50,9 @@ def arg_parser(argv, program_argv, logging):
 
     if '-FIFOD' in argv[1:]:
         program_argv['fifo_depth'] = int(argv[argv.index('-FIFOD')+1])
+
+    if '-routing' in argv[1:]:
+        program_argv['routing'] = str(argv[argv.index('-routing')+1])
 
     if '-vc' in argv[1:]:
         program_argv['vc'] = True

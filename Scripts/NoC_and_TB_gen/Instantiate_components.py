@@ -3,7 +3,7 @@ from CB_functions import rxy_rst_calculator, cx_rst_calculator
 import math
 
 
-def instantiate_routers(noc_file, network_dime_x, network_dime_y, vc, fifo_depth):
+def instantiate_routers(noc_file, network_dime_x, network_dime_y, vc, fifo_depth, routing):
     """
     Instantiates the different routers based on the specified configuration!
     noc_file:      string   : destination file
@@ -15,9 +15,20 @@ def instantiate_routers(noc_file, network_dime_x, network_dime_y, vc, fifo_depth
 
         noc_file.write("R_"+str(i)+": router_credit_based generic map (DATA_WIDTH  => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH, ")
 
-        # Uses an adaptive routing turn model from ISCAS 2016 paper! (deadlock-free)
-        noc_file.write("current_address=>"+str(i)+", " +
-                       "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 215, NoC_size_x => "+str(network_dime_x)+")\n")
+        # Uses deadlock-free routing algorithms/turn models (uniform turn model for all nodes).
+        if routing == 'xy':
+          noc_file.write("current_address=>"+str(i)+", " + "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 60, NoC_size_x => "+str(network_dime_x)+")\n")
+        elif routing == 'yx':
+          noc_file.write("current_address=>"+str(i)+", " + "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 195, NoC_size_x => "+str(network_dime_x)+")\n")
+        elif routing == 'wf':
+          noc_file.write("current_address=>"+str(i)+", " + "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 125, NoC_size_x => "+str(network_dime_x)+")\n")
+        elif routing == 'nl':
+          noc_file.write("current_address=>"+str(i)+", " + "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 252, NoC_size_x => "+str(network_dime_x)+")\n")
+        elif routing == 'nf':
+          noc_file.write("current_address=>"+str(i)+", " + "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 245, NoC_size_x => "+str(network_dime_x)+")\n")
+        elif routing == 'sr': # To be fixed!
+          noc_file.write("current_address=>"+str(i)+", " + "Cx_rst => "+str(cx_rst_calculator(i, network_dime_x, network_dime_y))+",Rxy_rst => 215, NoC_size_x => "+str(network_dime_x)+")\n")
+
         noc_file.write("PORT MAP (reset, clk, \n")
         noc_file.write("\tRX_N_"+str(i)+", RX_E_"+str(i)+", RX_W_"+str(i)+", RX_S_"+str(i)+", RX_L_"+str(i)+",\n")
         noc_file.write("\tcredit_in_N_"+str(i)+", credit_in_E_"+str(i)+", credit_in_W_"+str(i) +

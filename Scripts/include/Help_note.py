@@ -19,6 +19,9 @@ def print_help(argv, program_argv):
     print BOLD + "  -FIFOD [FIFO depth] :" + ENDC
     print "\tSets the FIFO depth for the router (number of FIFO slots). "
     print
+    print BOLD + "  -routing [routing algorithm] :" + ENDC
+    print "\tSets the routing algorith/turn model (default value is xy). It can be set to xy, yx, wf, nl, nf and sr. "
+    print
     print BOLD + "  -NI [NI depth] :" + ENDC
     print "\tAdds NI with designated depth! "
     print
@@ -61,25 +64,30 @@ def print_help(argv, program_argv):
     print BOLD + OKBLUE + "  Examples:" + ENDC
     print BOLD + "  Example 1:" + ENDC
     print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -Rand 0.01 -PS 8 8 -sim 10000 -end 12000"
-    print "\t\tdetails: runs a 4x4 network with packet injection rate of 0.01 and packet size of 8 and FIFO depth of 4 flits."
+    print "\t\tdetails: runs a 4x4 network with XY routing with packet injection rate of 0.01 and packet size of 8 and FIFO depth of 4 flits."
     print "\t\t         the injection of packets would stop at 10000 ns and simulation will stop "
     print "\t\t         at 12000 ns."
     print BOLD + "  Example 2:" + ENDC
     print "\t\tcommand: python simulate.py -D 2 2 -DW 32 -FIFOD 4 -Rand 0.02 -PS 8 8 -sim 10000 -end 12000 -lat"
-    print "\t\tdetails: runs a 2x2 network with packet injection rate of 0.02 and packet size of 8 and FIFO depth of 4 flits."
+    print "\t\tdetails: runs a 2x2 network with XY routing with packet injection rate of 0.02 and packet size of 8 and FIFO depth of 4 flits."
     print "\t\t         the injection of packets would stop at 10000 ns and simulation will stop "
     print "\t\t         at 12000 ns. at the end of simulation the tool reports the latency results!"
-    print BOLD + "  Example 3:" + ENDC
-    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -vc -Rand 0.05 -PS 8 8 -sim 10000 -end 12000"
-    print "\t\tdetails: runs a 4x4 network with virtual channels packet injection rate of 0.01 and "
-    print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
-    print "\t\t         simulation will stop at 12000 ns."
-    print BOLD + "  Example 3:" + ENDC
-    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -vc -Rand 0.05 -PS 8 8 -sim 10000 -end 12000"
-    print "\t\tdetails: runs a 4x4 network with virtual channels packet injection rate of 0.01 and "
-    print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
-    print "\t\t         simulation will stop at 12000 ns."
+    print BOLD + "  Example 2:" + ENDC
+    print "\t\tcommand: python simulate.py -D 2 2 -DW 32 -FIFOD 4 -routing wf -Rand 0.02 -PS 8 8 -sim 10000 -end 12000 -lat"
+    print "\t\tdetails: runs a 2x2 network with West-First turn model routing with packet injection rate of 0.02 and packet size of 8 and FIFO depth of 4 flits."
+    print "\t\t         the injection of packets would stop at 10000 ns and simulation will stop "
+    print "\t\t         at 12000 ns. at the end of simulation the tool reports the latency results!"
     print BOLD + "  Example 4:" + ENDC
+    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -vc -Rand 0.05 -PS 8 8 -sim 10000 -end 12000"
+    print "\t\tdetails: runs a 4x4 network with XY routing with virtual channels packet injection rate of 0.01 and "
+    print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
+    print "\t\t         simulation will stop at 12000 ns."
+    print BOLD + "  Example 5:" + ENDC
+    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -vc -Rand 0.05 -PS 8 8 -sim 10000 -end 12000"
+    print "\t\tdetails: runs a 4x4 network with XY routing with virtual channels packet injection rate of 0.01 and "
+    print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
+    print "\t\t         simulation will stop at 12000 ns."
+    print BOLD + "  Example 6:" + ENDC
     print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -sim 10000 -end 12000 -NI 32 -APP"
-    print "\t\tdetails: runs a 4x4 network with no virtual channels. The packets would be generated based on application files"
+    print "\t\tdetails: runs a 4x4 network with XY routing with no virtual channels. The packets would be generated based on application files"
     print "\t\t         the injection of packets would stop at 10000 ns and simulation will stop at 12000 ns."

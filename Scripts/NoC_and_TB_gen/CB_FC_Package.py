@@ -19,6 +19,7 @@ class CreditBasedPackage():
         self.network_dime_y = 4
         self.add_tracker = False
         self.vc = False
+        self.routing = 'xy'
 
     def sort_out_parameters(self, arguments_list):
 
@@ -27,6 +28,7 @@ class CreditBasedPackage():
                   "default value is 4."
             print "\t-DW [data_width]: sets the data width of the network."
             print "\t-FIFOD [fifo_depth]: sets the depth of the FIFO in terms of the number flit slots."
+            print "\t-routing [routing_algorithm]: sets the routing algorithm (default value is xy). It can be set to xy, yx, wf, nl, nf and sr."
             print "\t-o: specifies the name and path of the output file. default path is current folder."
             print "\t**Example: python network_gen_parameterized.py -D 2 -o ../output.vhd"
             print "\t           generates a 2X2 network that has network interface and parity checker and fault " \
@@ -46,6 +48,11 @@ class CreditBasedPackage():
             self.fifo_depth = int(arguments_list[arguments_list.index('-FIFOD')+1])
             if self.fifo_depth <= 1:
                 raise ValueError("wrong FIFO depth. please choose valid value (at least 2 FIFO slots)!")
+
+        if '-routing' in arguments_list:
+            self.routing = str(arguments_list[arguments_list.index('-routing')+1])
+            if self.routing != 'xy' and self.routing != 'yx' and self.routing != 'wf' and self.routing != 'nl' and self.routing != 'nf' and self.routing != 'sr':
+                raise ValueError("Invalid routing algorithm, or not supported by Bonfire yet.")
 
         if "-VC" in arguments_list:
             self.vc = True

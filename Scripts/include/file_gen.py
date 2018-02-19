@@ -19,6 +19,7 @@ def gen_network_and_tb(program_argv, flow_control_type):
     net_gen_command = "python " + SCRIPTS_DIR + "/NoC_and_TB_gen"  \
         + "/" + NET_GEN_SCRIPT + "_" + flow_control_type + ".py" \
         + " -D " + str(program_argv['network_dime_x']) + " " + str(program_argv['network_dime_y']) \
+        + " -routing " + str(program_argv['routing']) \
         + (" -VC" if program_argv['vc'] else "") \
         + " -o " + SIMUL_DIR + "/" + net_file_name
 

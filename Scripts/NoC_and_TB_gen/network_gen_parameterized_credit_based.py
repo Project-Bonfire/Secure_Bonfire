@@ -46,7 +46,7 @@ generate_ascii_art(noc_file, CB_Package.network_dime_x, CB_Package.network_dime_
 
 
 noc_file.write("begin\n\n\n")
-instantiate_routers(noc_file, CB_Package.network_dime_x, CB_Package.network_dime_y, CB_Package.vc, CB_Package.fifo_depth)
+instantiate_routers(noc_file, CB_Package.network_dime_x, CB_Package.network_dime_y, CB_Package.vc, CB_Package.fifo_depth, CB_Package.routing)
 
 
 noc_file.write("---------------------------------------------------------------\n")

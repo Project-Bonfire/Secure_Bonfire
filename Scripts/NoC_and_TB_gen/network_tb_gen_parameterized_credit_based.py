@@ -8,6 +8,7 @@ network_dime_x = 4
 network_dime_y = 4
 data_width = 32
 fifo_depth = 4
+routing = 'xy'
 random_dest = False
 got_finish_time = False
 sim_finish_time = None
@@ -39,6 +40,11 @@ if '-FIFOD' in sys.argv[1:]:
   fifo_depth = int(sys.argv[sys.argv.index('-FIFOD')+1])
   if fifo_depth <= 1:
     raise ValueError("Wrong FIFO depth! FIFO depth must at least be 2 slots.")
+
+if '-routing' in sys.argv[1:]:
+  routing = str(sys.argv[sys.argv.index('-routing')+1])
+  if routing != 'xy' and routing != 'yx' and routing != 'wf' and routing != 'nl' and routing != 'nf' and routing != 'sr':
+    raise ValueError("Invalid routing algorithm or not support by Bonfire yet.")
 
 if '-Rand'  in sys.argv[1:]:
   random_dest = True
@@ -304,9 +310,11 @@ if add_NI:
         random_end = random.randint(random_start, 200)
       appfile = "\"NONE\""
       if add_APP:
-          appfile = "\"../../App/app_"+str(node_number)+".txt\""
+        appfile = "\"../../App/app_"+str(node_number)+".txt\""
       # NI_control needs fixing !!!
-      noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, "+appfile+",clk,\n")
+        noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, "+appfile+",clk,\n")
+      else: 
+        noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, clk,\n")                
       noc_file.write("           -- NI configuration\n")
       if vc:
           noc_file.write("           reserved_address, reserved_address_vc, flag_address, counter_address, reconfiguration_address,\n")
