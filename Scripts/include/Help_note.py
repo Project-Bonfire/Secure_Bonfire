@@ -83,10 +83,10 @@ def print_help(argv, program_argv):
     print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
     print "\t\t         simulation will stop at 12000 ns."
     print BOLD + "  Example 5:" + ENDC
-    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -vc -Rand 0.05 -PS 8 8 -sim 10000 -end 12000"
+    print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -vc -Rand 0.05 -PS 8 8 -sim 10000 -end 12000 -NI 32"
     print "\t\tdetails: runs a 4x4 network with XY routing with virtual channels packet injection rate of 0.01 and "
-    print "\t\t         packet size of 8 and VC depth of 4 flits. the injection of packets would stop at 10000 ns and "
-    print "\t\t         simulation will stop at 12000 ns."
+    print "\t\t         packet size of 8 and VC depth of 4 flits. The system will use a network interface with depth of 32"
+    print "\t\t         the injection of packets would stop at 10000 ns and simulation will stop at 12000 ns."
     print BOLD + "  Example 6:" + ENDC
     print "\t\tcommand: python simulate.py -D 4 4 -DW 32 -FIFOD 4 -sim 10000 -end 12000 -NI 32 -APP"
     print "\t\tdetails: runs a 4x4 network with XY routing with no virtual channels. The packets would be generated based on application files"

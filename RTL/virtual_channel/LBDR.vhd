@@ -19,7 +19,7 @@ entity LBDR is
             flit_type: in std_logic_vector(2 downto 0);
             cur_addr_y, cur_addr_x: in std_logic_vector(3 downto 0);
             dst_addr_y, dst_addr_x: in std_logic_vector(3 downto 0);
-	          grant_N, grant_E, grant_W, grant_S, grant_L: in std_logic;
+	          grants: in std_logic;
             Req_N, Req_E, Req_W, Req_S, Req_L:out std_logic
             );
 end LBDR;
@@ -32,11 +32,8 @@ architecture behavior of LBDR is
   signal N1, E1, W1, S1  :std_logic :='0';
   signal Req_N_in, Req_E_in, Req_W_in, Req_S_in, Req_L_in: std_logic;
   signal Req_N_FF, Req_E_FF, Req_W_FF, Req_S_FF, Req_L_FF: std_logic;
-  signal grants: std_logic;
 
 begin
-
- grants <= grant_N or grant_E or grant_W or grant_S or grant_L;
 
   Cx  <= std_logic_vector(to_unsigned(Cx_rst,  Cx'length));
   Rxy <= std_logic_vector(to_unsigned(Rxy_rst, Rxy'length));
