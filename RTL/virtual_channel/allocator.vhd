@@ -99,11 +99,6 @@ signal grant_S_N_sig_vc, grant_S_E_sig_vc, grant_S_W_sig_vc, grant_S_S_sig_vc, g
 signal grant_L_N_sig_vc, grant_L_E_sig_vc, grant_L_W_sig_vc, grant_L_S_sig_vc, grant_L_L_sig_vc: std_logic;
 
 
-signal req_N_N_tmp, req_N_E_tmp, req_N_W_tmp, req_N_S_tmp, req_N_L_tmp: std_logic;
-signal req_E_N_tmp, req_E_E_tmp, req_E_W_tmp, req_E_S_tmp, req_E_L_tmp: std_logic;
-signal req_W_N_tmp, req_W_E_tmp, req_W_W_tmp, req_W_S_tmp, req_W_L_tmp: std_logic;
-signal req_S_N_tmp, req_S_E_tmp, req_S_W_tmp, req_S_S_tmp, req_S_L_tmp: std_logic;
-signal req_L_N_tmp, req_L_E_tmp, req_L_W_tmp, req_L_S_tmp, req_L_L_tmp: std_logic;
 
 constant max_credit_counter_value: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := std_logic_vector(to_unsigned(FIFO_DEPTH-1, CREDIT_COUNTER_LENGTH));
 
@@ -166,36 +161,6 @@ begin
 end process;
 
 -- The combionational part
-
-    req_N_N_tmp <= req_N_N;
-    req_N_E_tmp <= req_N_E;
-    req_N_W_tmp <= req_N_W;
-    req_N_S_tmp <= req_N_S;
-    req_N_L_tmp <= req_N_L;
-
-    req_E_N_tmp <= req_E_N;
-    req_E_E_tmp <= req_E_E;
-    req_E_W_tmp <= req_E_W;
-    req_E_S_tmp <= req_E_S;
-    req_E_L_tmp <= req_E_L;
-
-    req_W_N_tmp <= req_W_N;
-    req_W_E_tmp <= req_W_E;
-    req_W_W_tmp <= req_W_W;
-    req_W_S_tmp <= req_W_S;
-    req_W_L_tmp <= req_W_L;
-
-    req_S_N_tmp <= req_S_N;
-    req_S_E_tmp <= req_S_E;
-    req_S_W_tmp <= req_S_W;
-    req_S_S_tmp <= req_S_S;
-    req_S_L_tmp <= req_S_L;
-
-    req_L_N_tmp <= req_L_N;
-    req_L_E_tmp <= req_L_E;
-    req_L_W_tmp <= req_L_W;
-    req_L_S_tmp <= req_L_S;
-    req_L_L_tmp <= req_L_L;
 
     grant_N_N <= grant_N_N_sig and not empty_N and not grant_vc_N;
     grant_N_E <= grant_N_E_sig and not empty_E and not grant_vc_N;
@@ -291,31 +256,31 @@ process(credit_in_N, credit_in_E, credit_in_W, credit_in_S, credit_in_L, grant_N
 
 arb_N_X: arbiter_in  generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
                      PORT MAP (reset => reset, clk => clk,
-				                       Req_X_N=>req_N_N_tmp, Req_X_E=> req_N_E_tmp, Req_X_W=>req_N_W_tmp, Req_X_S=>req_N_S_tmp, Req_X_L=>req_N_L_tmp,
+				                       Req_X_N=>req_N_N, Req_X_E=> req_N_E, Req_X_W=>req_N_W, Req_X_S=>req_N_S, Req_X_L=>req_N_L,
                                credit_counter_N => credit_counter_N_out, credit_counter_E => credit_counter_E_out, credit_counter_W => credit_counter_W_out, credit_counter_S => credit_counter_S_out,
                                X_N=>X_N_N, X_E=>X_N_E, X_W=>X_N_W, X_S=>X_N_S, X_L=>X_N_L);
 
 arb_E_X: arbiter_in  generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
                      PORT MAP (reset => reset, clk => clk,
-				                       Req_X_N=>req_E_N_tmp, Req_X_E=> req_E_E_tmp, Req_X_W=>req_E_W_tmp, Req_X_S=>req_E_S_tmp, Req_X_L=>req_E_L_tmp,
+				                       Req_X_N=>req_E_N, Req_X_E=> req_E_E, Req_X_W=>req_E_W, Req_X_S=>req_E_S, Req_X_L=>req_E_L,
                                credit_counter_N => credit_counter_N_out, credit_counter_E => credit_counter_E_out, credit_counter_W => credit_counter_W_out, credit_counter_S => credit_counter_S_out,
                                X_N=>X_E_N, X_E=>X_E_E, X_W=>X_E_W, X_S=>X_E_S, X_L=>X_E_L);
 
 arb_W_X: arbiter_in  generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
                      PORT MAP (reset => reset, clk => clk,
-                               Req_X_N=>req_W_N_tmp, Req_X_E=> req_W_E_tmp, Req_X_W=>req_W_W_tmp, Req_X_S=>req_W_S_tmp, Req_X_L=>req_W_L_tmp,
+                               Req_X_N=>req_W_N, Req_X_E=> req_W_E, Req_X_W=>req_W_W, Req_X_S=>req_W_S, Req_X_L=>req_W_L,
                                credit_counter_N => credit_counter_N_out, credit_counter_E => credit_counter_E_out, credit_counter_W => credit_counter_W_out, credit_counter_S => credit_counter_S_out,
                                X_N=>X_W_N, X_E=>X_W_E, X_W=>X_W_W, X_S=>X_W_S, X_L=>X_W_L);
 
 arb_S_X: arbiter_in  generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
                      PORT MAP (reset => reset, clk => clk,
-                               Req_X_N=>req_S_N_tmp, Req_X_E=> req_S_E_tmp, Req_X_W=>req_S_W_tmp, Req_X_S=>req_S_S_tmp, Req_X_L=>req_S_L_tmp,
+                               Req_X_N=>req_S_N, Req_X_E=> req_S_E, Req_X_W=>req_S_W, Req_X_S=>req_S_S, Req_X_L=>req_S_L,
                                credit_counter_N => credit_counter_N_out, credit_counter_E => credit_counter_E_out, credit_counter_W => credit_counter_W_out, credit_counter_S => credit_counter_S_out,
                                X_N=>X_S_N, X_E=>X_S_E, X_W=>X_S_W, X_S=>X_S_S, X_L=>X_S_L);
 
 arb_L_X: arbiter_in  generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
                      PORT MAP (reset => reset, clk => clk,
-                               Req_X_N=>req_L_N_tmp, Req_X_E=> req_L_E_tmp, Req_X_W=>req_L_W_tmp, Req_X_S=>req_L_S_tmp, Req_X_L=>req_L_L_tmp,
+                               Req_X_N=>req_L_N, Req_X_E=> req_L_E, Req_X_W=>req_L_W, Req_X_S=>req_L_S, Req_X_L=>req_L_L,
                                credit_counter_N => credit_counter_N_out, credit_counter_E => credit_counter_E_out, credit_counter_W => credit_counter_W_out, credit_counter_S => credit_counter_S_out,
                                X_N=>X_L_N, X_E=>X_L_E, X_W=>X_L_W, X_S=>X_L_S, X_L=>X_L_L);
 

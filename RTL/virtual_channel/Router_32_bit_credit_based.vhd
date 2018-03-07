@@ -29,12 +29,12 @@ entity router_credit_based is
 
     valid_out_N, valid_out_E, valid_out_W, valid_out_S, valid_out_L : out std_logic;
     credit_out_N, credit_out_E, credit_out_W, credit_out_S, credit_out_L: out std_logic;
+    --------------------------------------------------------------------------------------------
+	  credit_in_vc_N, credit_in_vc_E, credit_in_vc_W, credit_in_vc_S, credit_in_vc_L: in std_logic;
+	  valid_in_vc_N, valid_in_vc_E, valid_in_vc_W, valid_in_vc_S, valid_in_vc_L : in std_logic;
 
-	credit_in_vc_N, credit_in_vc_E, credit_in_vc_W, credit_in_vc_S, credit_in_vc_L: in std_logic;
-	valid_in_vc_N, valid_in_vc_E, valid_in_vc_W, valid_in_vc_S, valid_in_vc_L : in std_logic;
-
-	valid_out_vc_N, valid_out_vc_E, valid_out_vc_W, valid_out_vc_S, valid_out_vc_L : out std_logic;
-	credit_out_vc_N, credit_out_vc_E, credit_out_vc_W, credit_out_vc_S, credit_out_vc_L: out std_logic;
+	  valid_out_vc_N, valid_out_vc_E, valid_out_vc_W, valid_out_vc_S, valid_out_vc_L : out std_logic;
+	  credit_out_vc_N, credit_out_vc_E, credit_out_vc_W, credit_out_vc_S, credit_out_vc_L: out std_logic;
 
     TX_N, TX_E, TX_W, TX_S, TX_L: out std_logic_vector (DATA_WIDTH-1 downto 0)
     );
@@ -240,12 +240,11 @@ allocator_unit: allocator
             valid_vc_N => valid_out_vc_N, valid_vc_E => valid_out_vc_E, valid_vc_W => valid_out_vc_W, valid_vc_S => valid_out_vc_S, valid_vc_L => valid_out_vc_L,
             -- grant_X_Y means the grant for X output port towards Y input port
             -- this means for any X in [N, E, W, S, L] then set grant_X_Y is one hot!
-            
+
             grants_N => grants_N, grants_E => grants_E, grants_W => grants_W, grants_S => grants_S, grants_L => grants_L,
             grants_N_vc => grants_N_vc, grants_E_vc => grants_E_vc, grants_W_vc => grants_W_vc, grants_S_vc => grants_S_vc, grants_L_vc => grants_L_vc,
             Xbar_sel_N => Xbar_sel_N, Xbar_sel_E => Xbar_sel_E, Xbar_sel_W => Xbar_sel_W, Xbar_sel_S => Xbar_sel_S, Xbar_sel_L => Xbar_sel_L
             );
-
 
 ------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------------------------------------------------------------------------
