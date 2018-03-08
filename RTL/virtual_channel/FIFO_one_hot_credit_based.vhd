@@ -106,7 +106,6 @@ begin
             write_pointer_vc(0) <= '1';
 
             FIFO_MEM_vc  <= (others => (others=>'0'));
-
             credit_out_vc <= '0';
 
         elsif clk'event and clk = '1' then
@@ -145,7 +144,6 @@ begin
 
   -- Reading from FIFO
   Data_out <= FIFO_MEM(to_integer(unsigned(one_hot_to_binary(read_pointer,log2(FIFO_DEPTH)))));
-
   empty_out <= empty;
 
 
@@ -201,8 +199,6 @@ begin
 
   -- Reading from FIFO
   Data_out_vc <= FIFO_MEM_vc(to_integer(unsigned(one_hot_to_binary(read_pointer_vc,log2(FIFO_DEPTH)))));
-
-
   empty_out_vc <= empty_vc;
 
 

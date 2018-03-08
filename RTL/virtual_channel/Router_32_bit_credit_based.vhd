@@ -43,12 +43,11 @@ end router_credit_based;
 
 architecture behavior of router_credit_based is
 
-  	signal FIFO_D_out_N, FIFO_D_out_E, FIFO_D_out_W, FIFO_D_out_S, FIFO_D_out_L: std_logic_vector(DATA_WIDTH-1 downto 0);
-  	signal FIFO_D_out_vc_N, FIFO_D_out_vc_E, FIFO_D_out_vc_W, FIFO_D_out_vc_S, FIFO_D_out_vc_L: std_logic_vector(DATA_WIDTH-1 downto 0);
+  signal FIFO_D_out_N, FIFO_D_out_E, FIFO_D_out_W, FIFO_D_out_S, FIFO_D_out_L: std_logic_vector(DATA_WIDTH-1 downto 0);
+  signal FIFO_D_out_vc_N, FIFO_D_out_vc_E, FIFO_D_out_vc_W, FIFO_D_out_vc_S, FIFO_D_out_vc_L: std_logic_vector(DATA_WIDTH-1 downto 0);
 
-
-  signal   grants_N, grants_E, grants_W, grants_S, grants_L:  std_logic;
-  signal   grants_N_vc, grants_E_vc, grants_W_vc, grants_S_vc, grants_L_vc:  std_logic;
+  signal grants_N, grants_E, grants_W, grants_S, grants_L:  std_logic;
+  signal grants_N_vc, grants_E_vc, grants_W_vc, grants_S_vc, grants_L_vc:  std_logic;
 
  	signal Req_NN, Req_EN, Req_WN, Req_SN, Req_LN: std_logic;
  	signal Req_NE, Req_EE, Req_WE, Req_SE, Req_LE: std_logic;

@@ -21,7 +21,6 @@ use ieee.numeric_std.all;
 
 package router_pack is
 
-
   COMPONENT FIFO_credit_based is
     generic (
         DATA_WIDTH: integer := 32;
@@ -48,7 +47,7 @@ package router_pack is
     );
   end COMPONENT;
 
-  component arbiter_in is
+  COMPONENT arbiter_in is
       generic (
           CREDIT_COUNTER_LENGTH: integer := 2
       );
@@ -58,9 +57,9 @@ package router_pack is
               credit_counter_N, credit_counter_E, credit_counter_W, credit_counter_S: in std_logic_vector (CREDIT_COUNTER_LENGTH-1 downto 0);
               X_N, X_E, X_W, X_S, X_L:out std_logic -- Grants given to LBDR requests (encoded as one-hot)
               );
-  end component;
+  end COMPONENT;
 
-  component arbiter_out is
+  COMPONENT arbiter_out is
       generic (
           CREDIT_COUNTER_LENGTH: integer := 2
       );
@@ -70,8 +69,8 @@ package router_pack is
               credit: in std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
               grant_Y_N, grant_Y_E, grant_Y_W, grant_Y_S, grant_Y_L :out std_logic -- Grants given to LBDR requests (encoded as one-hot)
               );
-  end component;
-  
+  end COMPONENT;
+
   COMPONENT allocator is
     generic (
       FIFO_DEPTH : integer := 4; -- FIFO counter size for read and write pointers would also be the same as FIFO depth, because of one-hot encoding of them!
