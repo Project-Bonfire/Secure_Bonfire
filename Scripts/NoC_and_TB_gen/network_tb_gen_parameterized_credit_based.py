@@ -314,7 +314,7 @@ if add_NI:
       # NI_control needs fixing !!!
         noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, "+appfile+",clk,\n")
       else: 
-        noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, clk,\n")                
+        noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, \"NONE\",clk,\n")                
       noc_file.write("           -- NI configuration\n")
       if vc:
           noc_file.write("           reserved_address, reserved_address_vc, flag_address, counter_address, reconfiguration_address,\n")
