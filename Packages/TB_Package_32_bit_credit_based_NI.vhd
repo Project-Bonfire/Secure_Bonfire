@@ -105,6 +105,7 @@ package body TB_Package is
     variable frame_counter: integer:= 0;
     variable packet_gen_time: time;
     variable sent: boolean := True;
+    variable packet_sent: boolean := False;
 
     begin
 
@@ -139,6 +140,13 @@ package body TB_Package is
       address <= flag_address;
       write_byte_enable <= "0000";
       wait until clk'event and clk ='0';
+      frame_counter := frame_counter + 1;
+      if frame_counter = frame_length then
+          frame_counter := 0;
+          packet_sent := False;
+          uniform(seed1, seed2, rand);
+          frame_starting_delay := integer(((integer(rand*100.0)*(frame_length - max_packet_size)))/100);
+      end if;
 
       --flag register is organized like this:
       --       .-------------------------------------------------.
@@ -150,12 +158,19 @@ package body TB_Package is
           address <= reserved_address;
           write_byte_enable <= "0000";
           wait until clk'event and clk ='0';
+          frame_counter := frame_counter + 1;
+          if frame_counter = frame_length then
+              frame_counter := 0;
+              packet_sent := False;
+              uniform(seed1, seed2, rand);
+              frame_starting_delay := integer(((integer(rand*100.0)*(frame_length - max_packet_size)))/100);
+          end if;
 
       elsif data_read(30) = '0' then -- P2N is not full, can send flit
           if APP_FILE_NAME = "NONE" then
             if frame_counter >= frame_starting_delay  then
-                if state = Idle and now  < finish_time then
-                    if frame_counter < frame_starting_delay+1 then
+                if state = Idle and now  < finish_time and packet_sent = False then
+                      packet_sent := True;
                       state :=  Header_flit;
                       send_counter := send_counter+1;
                         -- generating the destination address
@@ -205,9 +220,6 @@ package body TB_Package is
                             " with length: "& integer'image(send_packet_length)  & " id: " & integer'image(send_id_counter) & " Mem_address_1: " & integer'image(Mem_address_1)&
                             " Mem_address_2: " & integer'image(Mem_address_2) & " RW: " & integer'image(RW) & " DI: " & integer'image(DI) & " ROLE: " & integer'image(ROLE));
                       writeline(SEND_FILE, SEND_LINEVARIABLE);
-                    else
-                      state :=  Idle;
-                    end if;
                 elsif state = Header_flit then
                     -- first body flit
                     address <= reserved_address;
@@ -255,6 +267,7 @@ package body TB_Package is
               frame_counter := frame_counter + 1;
               if frame_counter = frame_length then
                   frame_counter := 0;
+                  packet_sent := False;
                   uniform(seed1, seed2, rand);
                   frame_starting_delay := integer(((integer(rand*100.0)*(frame_length - max_packet_size)))/100);
               end if;
