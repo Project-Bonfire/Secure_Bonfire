@@ -43,8 +43,9 @@ package router_pack is
 
   COMPONENT allocator is
     generic (
-        FIFO_DEPTH: integer := 4; 
-        CREDIT_COUNTER_LENGTH: integer := 4
+        FIFO_DEPTH: integer := 4;
+        CREDIT_COUNTER_LENGTH: integer := 4;
+        CREDIT_COUNTER_LENGTH_LOCAL : integer := 4
     );
     port (  reset: in  std_logic;
             clk: in  std_logic;
@@ -103,7 +104,7 @@ end COMPONENT;
 
   component NI is
    generic(FIFO_DEPTH: in integer := 4;
-           CREDIT_COUNTER_LENGTH: in integer := 2;  
+           CREDIT_COUNTER_LENGTH: in integer := 2;
            current_x : integer := 10; 	-- the current node's x
            current_y : integer := 10; 	-- the current node's y
            network_x : integer := 4 ;

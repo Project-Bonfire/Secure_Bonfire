@@ -13,7 +13,8 @@ def instantiate_routers(noc_file, network_dime_x, network_dime_y, vc, fifo_depth
     noc_file.write("-- instantiating the routers\n")
     for i in range(0, network_dime_x*network_dime_y):
 
-        noc_file.write("R_"+str(i)+": router_credit_based generic map (DATA_WIDTH  => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH, ")
+        noc_file.write("R_"+str(i)+": router_credit_based generic map (DATA_WIDTH  => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH, "+
+                                      "CREDIT_COUNTER_LENGTH_LOCAL=> CREDIT_COUNTER_LENGTH_LOCAL, ")
 
         # Uses deadlock-free routing algorithms/turn models (uniform turn model for all nodes).
         if routing == 'xy':

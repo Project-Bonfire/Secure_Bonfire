@@ -142,7 +142,7 @@ string_to_print = ""
 noc_file.write("component network_"+str(network_dime_x)+"x"+str(network_dime_y)+" is\n")
 
 
-noc_file.write(" generic (DATA_WIDTH: integer := 32; FIFO_DEPTH: integer := 4; CREDIT_COUNTER_LENGTH: integer := 2);\n")
+noc_file.write(" generic (DATA_WIDTH: integer := 32; FIFO_DEPTH: integer := 4; CREDIT_COUNTER_LENGTH: integer := 2; CREDIT_COUNTER_LENGTH_LOCAL: integer := 2);\n")
 noc_file.write("port (reset: in  std_logic; \n")
 noc_file.write("\tclk: in  std_logic; \n")
 
@@ -245,7 +245,7 @@ noc_file.write("-- instantiating the network\n")
 
 
 string_to_print = ""
-string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+" generic map (DATA_WIDTH  => "+str(data_width)+", FIFO_DEPTH => "+str(fifo_depth)+", CREDIT_COUNTER_LENGTH => "+str(int(ceil(log(fifo_depth)/log(2))))+")\n"
+string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+" generic map (DATA_WIDTH  => "+str(data_width)+", FIFO_DEPTH => "+str(fifo_depth)+", CREDIT_COUNTER_LENGTH => "+str(int(ceil(log(fifo_depth)/log(2))))+", CREDIT_COUNTER_LENGTH_LOCAL=> "+str(int(ceil(log(NI_depth)/log(2))))+")\n"
 string_to_print += "port map (reset, clk, \n"
 
 for i in range(network_dime_x*network_dime_y):
@@ -313,8 +313,8 @@ if add_NI:
         appfile = "\"../../App/app_"+str(node_number)+".txt\""
       # NI_control needs fixing !!!
         noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, "+appfile+",clk,\n")
-      else: 
-        noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, \"NONE\",clk,\n")                
+      else:
+        noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, \"NONE\",clk,\n")
       noc_file.write("           -- NI configuration\n")
       if vc:
           noc_file.write("           reserved_address, reserved_address_vc, flag_address, counter_address, reconfiguration_address,\n")

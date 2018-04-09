@@ -12,8 +12,9 @@ use work.router_pack.all;
 entity router_credit_based is
     generic (
         DATA_WIDTH: integer := 32;
-        FIFO_DEPTH: integer := 4; 
-        CREDIT_COUNTER_LENGTH : integer := 2;        
+        FIFO_DEPTH: integer := 4;
+        CREDIT_COUNTER_LENGTH : integer := 2;
+        CREDIT_COUNTER_LENGTH_LOCAL : integer := 2;
         current_address : integer := 0;
         Rxy_rst  : integer := 10;
         Cx_rst : integer := 10;
@@ -61,7 +62,7 @@ begin
 ------------------------------------------------------------------------------------------------------------------------------
 -- all the FIFOs
 FIFO_N: FIFO_credit_based
-    generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH) 
+    generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
     port map ( reset => reset, clk => clk, RX => RX_N, valid_in => valid_in_N,
             read_en_N => '0', read_en_E =>Grant_EN, read_en_W =>Grant_WN, read_en_S =>Grant_SN, read_en_L =>Grant_LN,
             credit_out => credit_out_N, empty_out => empty_N, Data_out => FIFO_D_out_N);
@@ -148,8 +149,8 @@ LBDR_L: LBDR generic map (Rxy_rst => Rxy_rst, Cx_rst => Cx_rst)
 
 -- switch allocator
 
-allocator_unit: allocator 
-            generic map (FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
+allocator_unit: allocator
+            generic map (FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH, CREDIT_COUNTER_LENGTH_LOCAL => CREDIT_COUNTER_LENGTH_LOCAL)
             port map ( reset => reset, clk => clk,
             -- flow control
             credit_in_N => credit_in_N, credit_in_E => credit_in_E, credit_in_W => credit_in_W, credit_in_S => credit_in_S, credit_in_L => credit_in_L,
@@ -160,7 +161,7 @@ allocator_unit: allocator
             req_W_N => Req_WN, req_W_E => Req_WE, req_W_W => '0', req_W_S => Req_WS, req_W_L => Req_WL,
             req_S_N => Req_SN, req_S_E => Req_SE, req_S_W => Req_SW, req_S_S => '0', req_S_L => Req_SL,
             req_L_N => Req_LN, req_L_E => Req_LE, req_L_W => Req_LW, req_L_S => Req_LS, req_L_L => '0',
-            
+
             empty_N => empty_N, empty_E => empty_E, empty_w => empty_W, empty_S => empty_S, empty_L => empty_L,
             valid_N => valid_out_N, valid_E => valid_out_E, valid_W => valid_out_W, valid_S => valid_out_S, valid_L => valid_out_L,
             -- grant_X_Y means the grant for X output port towards Y input port
