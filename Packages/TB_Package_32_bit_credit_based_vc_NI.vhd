@@ -14,6 +14,7 @@ package TB_Package is
 
    procedure NI_control(network_x, network_y, frame_length, current_address, initial_delay, min_packet_size, max_packet_size: in integer;
                       finish_time: in time;
+                      APP_FILE_NAME: in string;
                       signal clk:                      in std_logic;
                       -- NI configuration
                       signal reserved_address :        in std_logic_vector(29 downto 0);  -- reserved address for sending data to VC 0
@@ -67,6 +68,7 @@ package body TB_Package is
 
   procedure NI_control(network_x, network_y, frame_length, current_address, initial_delay, min_packet_size, max_packet_size: in integer;
                       finish_time: in time;
+                      APP_FILE_NAME: in string;
                       signal clk:                      in std_logic;
                       -- NI configuration
                       signal reserved_address :        in std_logic_vector(29 downto 0);

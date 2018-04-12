@@ -11,7 +11,8 @@ use work.router_pack.all;
 entity allocator is
     generic (
         FIFO_DEPTH : integer := 4; -- FIFO counter size for read and write pointers would also be the same as FIFO depth, because of one-hot encoding of them!
-        CREDIT_COUNTER_LENGTH : integer := 2
+        CREDIT_COUNTER_LENGTH : integer := 2;
+        CREDIT_COUNTER_LENGTH_LOCAL : integer := 2
     );
     port (  reset: in  std_logic;
             clk: in  std_logic;
@@ -57,7 +58,7 @@ architecture behavior of allocator is
   signal credit_counter_E_in, credit_counter_E_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal credit_counter_W_in, credit_counter_W_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal credit_counter_S_in, credit_counter_S_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
-  signal credit_counter_L_in, credit_counter_L_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
+  signal credit_counter_L_in, credit_counter_L_out: std_logic_vector(CREDIT_COUNTER_LENGTH_LOCAL-1 downto 0);
 
   signal X_N_N, X_N_E, X_N_W, X_N_S, X_N_L: std_logic;
   signal X_E_N, X_E_E, X_E_W, X_E_S, X_E_L: std_logic;
@@ -85,7 +86,7 @@ architecture behavior of allocator is
   signal credit_counter_E_in_vc, credit_counter_E_out_vc: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal credit_counter_W_in_vc, credit_counter_W_out_vc: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal credit_counter_S_in_vc, credit_counter_S_out_vc: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
-  signal credit_counter_L_in_vc, credit_counter_L_out_vc: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
+  signal credit_counter_L_in_vc, credit_counter_L_out_vc: std_logic_vector(CREDIT_COUNTER_LENGTH_LOCAL-1 downto 0);
 
   signal X_N_N_vc, X_N_E_vc, X_N_W_vc, X_N_S_vc, X_N_L_vc: std_logic;
   signal X_E_N_vc, X_E_E_vc, X_E_W_vc, X_E_S_vc, X_E_L_vc: std_logic;
@@ -102,6 +103,7 @@ architecture behavior of allocator is
 
 
   constant max_credit_counter_value: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := std_logic_vector(to_unsigned(FIFO_DEPTH-1, CREDIT_COUNTER_LENGTH));
+  constant max_credit_counter_value_Local: std_logic_vector(CREDIT_COUNTER_LENGTH_LOCAL-1 downto 0) := (others=>'1');
 
 begin
 
@@ -114,13 +116,13 @@ begin
 		credit_counter_E_out <= max_credit_counter_value;
 		credit_counter_W_out <= max_credit_counter_value;
 		credit_counter_S_out <= max_credit_counter_value;
-		credit_counter_L_out <= max_credit_counter_value;
+		credit_counter_L_out <= max_credit_counter_value_Local;
 
     credit_counter_N_out_vc <= max_credit_counter_value;
 		credit_counter_E_out_vc <= max_credit_counter_value;
 		credit_counter_W_out_vc <= max_credit_counter_value;
 		credit_counter_S_out_vc <= max_credit_counter_value;
-		credit_counter_L_out_vc <= max_credit_counter_value;
+		credit_counter_L_out_vc <= max_credit_counter_value_Local;
 
 	elsif clk'event and clk = '1' then
 		credit_counter_N_out <= credit_counter_N_in;
@@ -331,7 +333,7 @@ arb_X_S: arbiter_out generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH
                                grant_Y_L => grant_S_L_sig);
 
 -- Y is L now
-arb_X_L: arbiter_out generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
+arb_X_L: arbiter_out generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH_LOCAL)
                      port map (reset => reset, clk => clk,
                                X_N_Y => X_N_L, X_E_Y => X_E_L, X_W_Y => X_W_L,
                                X_S_Y => X_S_L, X_L_Y => X_L_L,
@@ -550,7 +552,7 @@ arb_X_S_vc: arbiter_out generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LEN
                                   grant_Y_L => grant_S_L_sig_vc);
 
 -- Y is L now
-arb_X_L_vc: arbiter_out generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
+arb_X_L_vc: arbiter_out generic map (CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH_LOCAL)
                         port map (reset => reset, clk => clk,
                                   X_N_Y => X_N_L_vc, X_E_Y => X_E_L_vc,
                                   X_W_Y => X_W_L_vc, X_S_Y => X_S_L_vc, X_L_Y => X_L_L_vc,

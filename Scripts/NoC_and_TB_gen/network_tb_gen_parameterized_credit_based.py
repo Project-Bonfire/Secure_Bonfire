@@ -66,6 +66,8 @@ if '-sim'  in sys.argv[1:]:
 if '-NI' in sys.argv[1:]:
     add_NI = True
     NI_depth = int(sys.argv[1:][sys.argv[1:].index('-NI')+1])
+    if not (log(NI_depth,2)).is_integer():
+        raise ValueError("NI Depth should be powers of 2")
 
 if '-APP' in sys.argv[1:]:
     add_APP = True

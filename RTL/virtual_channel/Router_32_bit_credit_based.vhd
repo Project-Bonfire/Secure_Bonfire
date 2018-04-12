@@ -14,6 +14,7 @@ entity router_credit_based is
         DATA_WIDTH: integer := 32;
         FIFO_DEPTH: integer := 4;
         CREDIT_COUNTER_LENGTH : integer := 2;
+        CREDIT_COUNTER_LENGTH_LOCAL : integer := 2;
         current_address : integer := 0;
         Rxy_rst  : integer := 10;
         Cx_rst : integer := 10;
@@ -211,7 +212,7 @@ LBDR_vc_L: LBDR generic map (Rxy_rst => Rxy_rst, Cx_rst => Cx_rst)
 -- switch allocator
 
 allocator_unit: allocator
-            generic map (FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH)
+            generic map (FIFO_DEPTH => FIFO_DEPTH, CREDIT_COUNTER_LENGTH => CREDIT_COUNTER_LENGTH, CREDIT_COUNTER_LENGTH_LOCAL => CREDIT_COUNTER_LENGTH_LOCAL)
             port map ( reset => reset, clk => clk,
             -- flow control
             credit_in_N => credit_in_N, credit_in_E => credit_in_E, credit_in_W => credit_in_W, credit_in_S => credit_in_S, credit_in_L => credit_in_L,

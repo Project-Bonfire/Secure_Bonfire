@@ -74,7 +74,8 @@ package router_pack is
   COMPONENT allocator is
     generic (
       FIFO_DEPTH : integer := 4; -- FIFO counter size for read and write pointers would also be the same as FIFO depth, because of one-hot encoding of them!
-      CREDIT_COUNTER_LENGTH : integer := 2
+      CREDIT_COUNTER_LENGTH : integer := 2;
+      CREDIT_COUNTER_LENGTH_LOCAL : integer := 4
   );
   port (  reset: in  std_logic;
           clk: in  std_logic;
