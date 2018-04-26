@@ -47,7 +47,7 @@ process(clk)
 		packet_id := 0;
 		max_latency := 0;
 		max_router := 0;
-		body_flit_number := 1;
+		
 		if clk'event and clk = '1' then 	-- checks the link status on the rising edge of the clock!
 			if unsigned(RX) /= to_unsigned(0, RX'length) and valid_in = '1' then
 				if RX(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001" then -- header received!
@@ -58,7 +58,7 @@ process(clk)
 		            source_x := to_integer(unsigned(RX(24 downto 21)));
 		            source_y := to_integer(unsigned(RX(28 downto 25)));
 		            Mem_address1 := to_integer(unsigned(RX(12 downto 1)));
-		            
+		            body_flit_number := 1;
 		            xor_check :=  XOR_REDUCE(RX(DATA_WIDTH-1 downto 1));
 		            if xor_check = RX(0) then	-- the flit is healthy
 		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_x) &"," &integer'image(source_y) & " to " & integer'image(destination_x) &"," &integer'image(destination_y) & " with Mem_address1: " & integer'image(Mem_address1));
