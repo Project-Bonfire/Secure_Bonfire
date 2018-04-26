@@ -22,6 +22,7 @@ NI_depth = 0
 vc = False
 add_APP = False
 frame_size = 0
+add_tracker = False
 
 
 if '-D'  in sys.argv[1:]:
@@ -71,6 +72,9 @@ if '-NI' in sys.argv[1:]:
 
 if '-APP' in sys.argv[1:]:
     add_APP = True
+
+if "-trace" in sys.argv[1:]:
+  add_tracker = True
 
 if '-PS'  in sys.argv[1:]:
   get_packet_size = True
@@ -242,6 +246,19 @@ noc_file.write("\n")
 
 noc_file.write("reset <= '1' after 1 ns;\n")
 noc_file.write("\n")
+
+if add_tracker:
+    noc_file.write("-- instantiating the flit trackers\n")
+    for i in range(0, network_dime_x*network_dime_y):
+        noc_file.write("F_T_"+str(i)+"_T: flit_tracker  generic map (\n")
+        noc_file.write("        DATA_WIDTH => "+str(data_width)+", \n")
+        noc_file.write("        tracker_file =>\"traces/track"+str(i)+"_T.txt\"\n")
+        noc_file.write("    )\n")
+        noc_file.write("    port map (\n")
+        noc_file.write("        clk => clk, RX => TX_L_"+str(i)+", \n")
+        noc_file.write("        valid_in => valid_out_L_"+str(i)+"\n")
+        noc_file.write("    );\n")
+
 
 noc_file.write("-- instantiating the network\n")
 
