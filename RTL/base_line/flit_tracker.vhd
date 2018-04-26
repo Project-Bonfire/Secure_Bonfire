@@ -26,7 +26,7 @@ end;
 architecture behavior of flit_tracker is
 begin
 process(clk)
-	variable source_id, destination_id, Packet_length, packet_id, Mem_address1, Mem_address2, opcode: integer;
+	variable source_x, source_y, destination_x, destination_y, Packet_length, packet_id, Mem_address1, Mem_address2, opcode: integer;
 	variable max_latency, max_router: integer;
  	variable xor_check : std_logic;
  	variable body_flit_number : integer := 0;
@@ -37,8 +37,10 @@ process(clk)
 
 	begin
 		Packet_length := 0;
-		destination_id := 0;
-		source_id := 0;
+		destination_x := 0;
+		destination_y := 0;
+		source_x := 0;
+		source_y := 0;
 		Mem_address1 := 0;
 		Mem_address2 := 0;
 		opcode := 0;
@@ -51,13 +53,15 @@ process(clk)
 				if RX(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001" then -- header received!
 					
 
-		            destination_id := to_integer(unsigned(RX(20 downto 13)));
-		            source_id := to_integer(unsigned(RX(28 downto 21)));
+		            destination_x := to_integer(unsigned(RX(20 downto 13)));
+		            destination_y := to_integer(unsigned(RX(20 downto 13)));
+		            source_x := to_integer(unsigned(RX(28 downto 21)));
+		            source_y := to_integer(unsigned(RX(28 downto 21)));
 		            Mem_address1 := to_integer(unsigned(RX(12 downto 1)));
 		            
 		            xor_check :=  XOR_REDUCE(RX(DATA_WIDTH-1 downto 1));
 		            if xor_check = RX(0) then	-- the flit is healthy
-		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_id) & " to " & integer'image(destination_id) & " with Mem_address1: " & integer'image(Mem_address1));
+		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_x) &"," &integer'image(source_y) & " to " & integer'image(destination_x) &"," &integer'image(destination_y) & " with Mem_address1: " & integer'image(Mem_address1));
 		            else
 		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_id) & " to " & integer'image(destination_id) & " with Mem_address1: " & integer'image(Mem_address1) & " FAULTY ");
 		            end if;
@@ -70,18 +74,21 @@ process(clk)
 						Mem_address2 := to_integer(unsigned(RX(28 downto 9)));
 						opcode := to_integer(unsigned(RX(5 downto 1)));
 						if xor_check = RX(0) then -- the flit is healthy
-						write(LINEVARIABLE, "B flit at " & time'image(now)& " Mem_address2 " & integer'image(Mem_address2) &  " opcode " & integer'image(opcode));
+							write(LINEVARIABLE, "B flit at " & time'image(now)& " Mem_address2 " & integer'image(Mem_address2) &  " opcode " & integer'image(opcode));
 						else
-							write(LINEVARIABLE, "B flit at " & time'image(now) & " FAULTY ");
+							write(LINEVARIABLE, "B flit at " & time'image(now)& " Mem_address2 " & integer'image(Mem_address2) &  " opcode " & integer'image(opcode) & " FAULTY ");
 						end if;
-					end if;
-		            
 
-					if body_flit_number = 2 then
-						packet_id := to_integer(unsigned(RX(14 downto 1)));
-						Packet_length := to_integer(unsigned(RX(28 downto 15)));
+					elsif body_flit_number = 2 then
+						
 						if xor_check = RX(0) then -- the flit is healthy
-						write(LINEVARIABLE, "B flit at " & time'image(now)& " packet_id " & integer'image(packet_id) &  " Packet_length " & integer'image(Packet_length));
+							write(LINEVARIABLE, "B flit at " & time'image(now)& " packet_id " & integer'image(packet_id) &  " Packet_length " & integer'image(Packet_length));
+						else
+							write(LINEVARIABLE, "B flit at " & time'image(now) & " packet_id " & integer'image(packet_id) &  " Packet_length " & integer'image(Packet_length) & " FAULTY ");
+						end if;
+					else
+						if xor_check = RX(0) then -- the flit is healthy
+							write(LINEVARIABLE, "B flit at " & time'image(now));
 						else
 							write(LINEVARIABLE, "B flit at " & time'image(now) & " FAULTY ");
 						end if;
