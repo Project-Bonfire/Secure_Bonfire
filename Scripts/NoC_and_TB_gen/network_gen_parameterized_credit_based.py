@@ -54,14 +54,14 @@ if CB_Package.add_tracker:
     for i in range(0, CB_Package.network_dime_x*CB_Package.network_dime_y):
         node_x = i % CB_Package.network_dime_x
         node_y = i / CB_Package.network_dime_x
-        for input_port  in ['N', 'E', 'W', 'S', 'L']:
-            noc_file.write("F_T_"+str(i)+"_"+input_port+": flit_tracker  generic map (\n")
+        for out_port  in ['N', 'E', 'W', 'S', 'L']:
+            noc_file.write("F_T_"+str(i)+"_"+out_port+": flit_tracker  generic map (\n")
             noc_file.write("        DATA_WIDTH => DATA_WIDTH, \n")
-            noc_file.write("        tracker_file =>\"traces/track"+str(i)+"_"+input_port+".txt\"\n")
+            noc_file.write("        tracker_file =>\"traces/track"+str(i)+"_"+out_port+".txt\"\n")
             noc_file.write("    )\n")
             noc_file.write("    port map (\n")
-            noc_file.write("        clk => clk, RX => RX_"+input_port+"_"+str(i)+", \n")
-            noc_file.write("        valid_in => valid_in_"+input_port+"_"+str(i)+"\n")
+            noc_file.write("        clk => clk, RX => TX_"+out_port+"_"+str(i)+", \n")
+            noc_file.write("        valid_in => valid_out_"+out_port+"_"+str(i)+"\n")
             noc_file.write("    );\n")
 
 noc_file.write("---------------------------------------------------------------\n")
