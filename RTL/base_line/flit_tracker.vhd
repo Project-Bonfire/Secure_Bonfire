@@ -63,7 +63,7 @@ process(clk)
 		            if xor_check = RX(0) then	-- the flit is healthy
 		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_x) &"," &integer'image(source_y) & " to " & integer'image(destination_x) &"," &integer'image(destination_y) & " with Mem_address1: " & integer'image(Mem_address1));
 		            else
-		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_id) & " to " & integer'image(destination_id) & " with Mem_address1: " & integer'image(Mem_address1) & " FAULTY ");
+		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_x) &"," &integer'image(source_y) & " to " & integer'image(destination_x) &"," &integer'image(destination_y)  & " with Mem_address1: " & integer'image(Mem_address1) & " FAULTY ");
 		            end if;
 					writeline(trace_file, LINEVARIABLE);
 				elsif RX(DATA_WIDTH-1 downto DATA_WIDTH-3) = "010" then 
