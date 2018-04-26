@@ -128,6 +128,20 @@ noc_file.write("end tb_network_"+str(network_dime_x)+"x"+str(network_dime_y)+"; 
 noc_file.write("\n\n")
 noc_file.write("architecture behavior of tb_network_"+str(network_dime_x)+"x"+str(network_dime_y)+" is\n\n")
 
+
+if add_tracker:
+      noc_file.write("component flit_tracker is\n")
+      noc_file.write("    generic (\n")
+      noc_file.write("        DATA_WIDTH: integer := 32;\n")
+      noc_file.write("        tracker_file: string :=\"track.txt\"\n")
+      noc_file.write("    );\n")
+      noc_file.write("    port (\n")
+      noc_file.write("        clk: in std_logic;\n")
+      noc_file.write("        RX: in std_logic_vector (DATA_WIDTH-1 downto 0); \n")
+      noc_file.write("        valid_in : in std_logic \n")
+      noc_file.write("    );\n")
+      noc_file.write("end component;\n")
+
 noc_file.write("-- Declaring network component\n")
 
 noc_file.write("\n")
