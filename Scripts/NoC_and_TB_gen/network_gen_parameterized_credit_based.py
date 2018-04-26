@@ -51,9 +51,9 @@ instantiate_routers(noc_file, CB_Package.network_dime_x, CB_Package.network_dime
 
 if CB_Package.add_tracker:
     noc_file.write("-- instantiating the flit trackers\n")
-    for i in range(0, CB_Package.network_dime**2):
-        node_x = i % CB_Package.network_dime
-        node_y = i / CB_Package.network_dime
+    for i in range(0, CB_Package.network_dime_x*network_dime_y):
+        node_x = i % CB_Package.network_dime_x
+        node_y = i / CB_Package.network_dime_x
         for input_port  in ['N', 'E', 'W', 'S', 'L']:
             noc_file.write("F_T_"+str(i)+"_"+input_port+": flit_tracker  generic map (\n")
             noc_file.write("        DATA_WIDTH => DATA_WIDTH, \n")
