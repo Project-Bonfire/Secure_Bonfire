@@ -27,6 +27,7 @@ architecture behavior of flit_tracker is
 begin
 process(clk)
 	variable source_id, destination_id, Packet_length, packet_id, Mem_address1, Mem_address2, opcode: integer;
+	variable max_latency, max_router: integer;
  	variable xor_check : std_logic;
  	variable body_flit_number : integer := 0;
 
@@ -42,6 +43,8 @@ process(clk)
 		Mem_address2 := 0;
 		opcode := 0;
 		packet_id := 0;
+		max_latency := 0;
+		max_router := 0;
 		body_flit_number := 1;
 		if clk'event and clk = '1' then 	-- checks the link status on the rising edge of the clock!
 			if unsigned(RX) /= to_unsigned(0, RX'length) and valid_in = '1' then
