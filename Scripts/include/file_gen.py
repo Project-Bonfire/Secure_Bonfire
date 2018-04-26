@@ -45,6 +45,7 @@ def gen_network_and_tb(program_argv, flow_control_type):
         + (" -Rand " + str(program_argv['rand']) if program_argv['rand'] != -1 else "") \
         + (" -VC " if program_argv['vc'] else "") \
         + (" -APP " if program_argv['app'] else "") \
+        + (" -trace" if program_argv['trace'] else "") \
         + (" -NI "+str(program_argv['NI_depth']) if program_argv['NI'] else "") \
         + (" -BR " + str(program_argv['BR']) if program_argv['BR'] != -1 else "") \
         + (" -PS " + str(program_argv['PS'][0]) + " " + str(program_argv['PS'][1])) \
