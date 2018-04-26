@@ -254,7 +254,8 @@ package body TB_Package is
                     -- tail flit
                     address <= reserved_address;
                     write_byte_enable <= "1111";
-                    data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
+                    --data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
+                    data_write <= (others => '0');
                     send_counter := 0;
                     state :=  Idle;
                     send_id_counter := send_id_counter + 1;
@@ -338,7 +339,8 @@ package body TB_Package is
               state :=  Idle;
               address <= reserved_address;
               write_byte_enable <= "1111";
-              data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
+              data_write <= (others =>'0');
+              --data_write <= "0000" & std_logic_vector(to_unsigned(integer(rand*1000.0), 28));
               send_id_counter := send_id_counter + 1;
               if send_id_counter = 16384 then
                 send_id_counter := 0;
