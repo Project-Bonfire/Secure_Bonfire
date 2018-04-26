@@ -49,6 +49,21 @@ noc_file.write("begin\n\n\n")
 instantiate_routers(noc_file, CB_Package.network_dime_x, CB_Package.network_dime_y, CB_Package.vc, CB_Package.fifo_depth, CB_Package.routing)
 
 
+if CB_Package.add_tracker:
+    noc_file.write("-- instantiating the flit trackers\n")
+    for i in range(0, CB_Package.network_dime**2):
+        node_x = i % CB_Package.network_dime
+        node_y = i / CB_Package.network_dime
+        for input_port  in ['N', 'E', 'W', 'S', 'L']:
+            noc_file.write("F_T_"+str(i)+"_"+input_port+": flit_tracker  generic map (\n")
+            noc_file.write("        DATA_WIDTH => DATA_WIDTH, \n")
+            noc_file.write("        tracker_file =>\"traces/track"+str(i)+"_"+input_port+".txt\"\n")
+            noc_file.write("    )\n")
+            noc_file.write("    port map (\n")
+            noc_file.write("        clk => clk, RX => RX_"+input_port+"_"+str(i)+", \n")
+            noc_file.write("        valid_in => valid_in_"+input_port+"_"+str(i)+"\n")
+            noc_file.write("    );\n")
+
 noc_file.write("---------------------------------------------------------------\n")
 noc_file.write("-- binding the routers together\n")
 noc_file.write("-- vertical ins/outs\n")
