@@ -53,10 +53,10 @@ process(clk)
 				if RX(DATA_WIDTH-1 downto DATA_WIDTH-3) = "001" then -- header received!
 					
 
-		            destination_x := to_integer(unsigned(RX(20 downto 13)));
-		            destination_y := to_integer(unsigned(RX(20 downto 13)));
-		            source_x := to_integer(unsigned(RX(28 downto 21)));
-		            source_y := to_integer(unsigned(RX(28 downto 21)));
+		            destination_x := to_integer(unsigned(RX(16 downto 13)));
+		            destination_y := to_integer(unsigned(RX(20 downto 17)));
+		            source_x := to_integer(unsigned(RX(24 downto 21)));
+		            source_y := to_integer(unsigned(RX(28 downto 25)));
 		            Mem_address1 := to_integer(unsigned(RX(12 downto 1)));
 		            
 		            xor_check :=  XOR_REDUCE(RX(DATA_WIDTH-1 downto 1));
