@@ -57,7 +57,7 @@ process(clk)
 		            
 		            xor_check :=  XOR_REDUCE(RX(DATA_WIDTH-1 downto 1));
 		            if xor_check = RX(0) then	-- the flit is healthy
-		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_id) & " to " & integer'image(destination_id) & " with Mem_address1: " & integer'image(Mem_address1);
+		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_id) & " to " & integer'image(destination_id) & " with Mem_address1: " & integer'image(Mem_address1));
 		            else
 		            	write(LINEVARIABLE, "H flit at " & time'image(now) & " From " & integer'image(source_id) & " to " & integer'image(destination_id) & " with Mem_address1: " & integer'image(Mem_address1) & " FAULTY ");
 		            end if;
