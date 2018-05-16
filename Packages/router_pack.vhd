@@ -20,8 +20,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package router_pack is
-
-    COMPONENT FIFO_credit_based
+  
+  component FIFO_credit_based
   generic (
         DATA_WIDTH: integer := 32;
         FIFO_DEPTH: integer := 4 -- FIFO counter size for read and write pointers would also be the same as FIFO depth, because of one-hot encoding of them!
@@ -38,10 +38,9 @@ package router_pack is
             credit_out: out std_logic;
             empty_out: out std_logic;
             Data_out: out std_logic_vector(DATA_WIDTH-1 downto 0)
-    );
-  end COMPONENT;
+    );end component;
 
-  COMPONENT allocator is
+  component allocator is
     generic (
         FIFO_DEPTH: integer := 4;
         CREDIT_COUNTER_LENGTH: integer := 4;
@@ -67,10 +66,9 @@ package router_pack is
             grant_W_N, grant_W_E, grant_W_W, grant_W_S, grant_W_L: out std_logic;
             grant_S_N, grant_S_E, grant_S_W, grant_S_S, grant_S_L: out std_logic;
             grant_L_N, grant_L_E, grant_L_W, grant_L_S, grant_L_L: out std_logic
-            );
-end COMPONENT;
+            );end component;
 
-COMPONENT LBDR is
+  component LBDR is
     generic (
         cur_addr_rst: integer := 8;
         Rxy_rst: integer := 8;
@@ -84,10 +82,9 @@ COMPONENT LBDR is
             dst_addr_y, dst_addr_x: in std_logic_vector(3 downto 0);
             grant_N, grant_E, grant_W, grant_S, grant_L: in std_logic;
             Req_N, Req_E, Req_W, Req_S, Req_L:out std_logic
-            );
-end COMPONENT;
+            );end component;
 
-  COMPONENT XBAR is
+  component XBAR is
     generic (
         DATA_WIDTH: integer := 32
     );
@@ -99,8 +96,7 @@ end COMPONENT;
         Local_in: in std_logic_vector(DATA_WIDTH-1 downto 0);
         sel: in std_logic_vector (4 downto 0);
         Data_out: out std_logic_vector(DATA_WIDTH-1 downto 0)
-    );
-  end COMPONENT;
+    );end component;
 
   component NI is
    generic(FIFO_DEPTH: in integer := 4;
@@ -135,6 +131,28 @@ end COMPONENT;
         RX: in std_logic_vector(31 downto 0)  -- data recieved form the NoC
 
   );
-end component; --entity NI
+  end component;
+
+  component arbiter_in is
+    generic (
+        CREDIT_COUNTER_LENGTH: integer := 2
+    );
+    port (  reset: in  std_logic;
+            clk: in  std_logic;
+            Req_X_N, Req_X_E, Req_X_W, Req_X_S, Req_X_L:in std_logic; -- From LBDR modules
+            credit_counter_N, credit_counter_E, credit_counter_W, credit_counter_S: in std_logic_vector (CREDIT_COUNTER_LENGTH-1 downto 0);
+            X_N, X_E, X_W, X_S, X_L:out std_logic -- Grants given to LBDR requests (encoded as one-hot)
+            );end component;
+
+  component arbiter_out is
+    generic (
+        CREDIT_COUNTER_LENGTH: integer := 2
+    );
+    port (  reset: in  std_logic;
+            clk: in  std_logic;
+            X_N_Y, X_E_Y, X_W_Y, X_S_Y, X_L_Y:in std_logic; -- From LBDR modules
+            credit: in std_logic_vector(CREDIT_COUNTER_LENGTH - 1 downto 0);
+            grant_Y_N, grant_Y_E, grant_Y_W, grant_Y_S, grant_Y_L :out std_logic -- Grants given to LBDR requests (encoded as one-hot)
+            );end component;
 
 end; --package body

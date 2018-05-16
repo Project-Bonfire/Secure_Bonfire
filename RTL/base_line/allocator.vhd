@@ -5,6 +5,7 @@ use ieee.std_logic_1164.all;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.NUMERIC_STD.all;
+use work.router_pack.all;
 
 entity allocator is
     generic (
@@ -62,29 +63,7 @@ signal   grant_L_N_sig, grant_L_E_sig, grant_L_W_sig, grant_L_S_sig, grant_L_L_s
 constant max_credit_counter_value: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := std_logic_vector(to_unsigned(FIFO_DEPTH-1, CREDIT_COUNTER_LENGTH));
 constant max_credit_counter_value_Local: std_logic_vector(CREDIT_COUNTER_LENGTH_LOCAL-1 downto 0) := (others=>'1');
 
-component arbiter_in is
-    generic (
-        CREDIT_COUNTER_LENGTH: integer := 2
-    );
-    port (  reset: in  std_logic;
-            clk: in  std_logic;
-            Req_X_N, Req_X_E, Req_X_W, Req_X_S, Req_X_L:in std_logic; -- From LBDR modules
-            credit_counter_N, credit_counter_E, credit_counter_W, credit_counter_S: in std_logic_vector (CREDIT_COUNTER_LENGTH-1 downto 0);
-            X_N, X_E, X_W, X_S, X_L:out std_logic -- Grants given to LBDR requests (encoded as one-hot)
-            );
-end component;
 
-component arbiter_out is
-    generic (
-        CREDIT_COUNTER_LENGTH: integer := 2
-    );
-    port (  reset: in  std_logic;
-            clk: in  std_logic;
-            X_N_Y, X_E_Y, X_W_Y, X_S_Y, X_L_Y:in std_logic; -- From LBDR modules
-            credit: in std_logic_vector(CREDIT_COUNTER_LENGTH - 1 downto 0);
-            grant_Y_N, grant_Y_E, grant_Y_W, grant_Y_S, grant_Y_L :out std_logic -- Grants given to LBDR requests (encoded as one-hot)
-            );
-end component;
 
 begin
 

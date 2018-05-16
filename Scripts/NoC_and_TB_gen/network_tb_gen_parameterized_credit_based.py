@@ -278,7 +278,8 @@ noc_file.write("-- instantiating the network\n")
 
 
 string_to_print = ""
-string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+" generic map (DATA_WIDTH  => "+str(data_width)+", FIFO_DEPTH => "+str(fifo_depth)+", CREDIT_COUNTER_LENGTH => "+str(int(ceil(log(fifo_depth)/log(2))))+", CREDIT_COUNTER_LENGTH_LOCAL=> "+str(int(ceil(log(NI_depth)/log(2))))+")\n"
+string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+" generic map (DATA_WIDTH  => "+str(data_width)+", FIFO_DEPTH => "+str(fifo_depth)+", CREDIT_COUNTER_LENGTH => "+str(int(ceil(log(fifo_depth)/log(2))))+", CREDIT_COUNTER_LENGTH_LOCAL=> "+\
+                    str(int(ceil(log(NI_depth)/log(2))) if NI_depth > 0 else  int(ceil(log(fifo_depth)/log(2))))+")\n"
 string_to_print += "port map (reset, clk, \n"
 
 for i in range(network_dime_x*network_dime_y):

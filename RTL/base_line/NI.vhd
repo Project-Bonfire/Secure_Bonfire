@@ -72,7 +72,6 @@ architecture logic of NI is
   signal P2N_full, P2N_empty: std_logic;
   signal P2N_empty_slots: std_logic_vector(NI_couter_size downto 0);
 
-
   signal credit_counter_in, credit_counter_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal packet_counter_in, packet_counter_out: std_logic_vector(13 downto 0);
   signal packet_length_counter_in, packet_length_counter_out: std_logic_vector(13 downto 0);
@@ -88,7 +87,6 @@ architecture logic of NI is
   signal N2P_FIFO, N2P_FIFO_in : MEM;
 
   signal N2P_Data_out : std_logic_vector(31 downto 0);
-
 
   signal N2P_FIFO_read_pointer, N2P_FIFO_read_pointer_in: std_logic_vector(NI_couter_size-1 downto 0);
   signal N2P_FIFO_write_pointer, N2P_FIFO_write_pointer_in: std_logic_vector(NI_couter_size-1 downto 0);
@@ -123,16 +121,15 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       P2N_FIFO  <= (others => (others=>'0'));
       credit_counter_out <= max_credit_counter_value;
       packet_length_counter_out <= "00000000000000";
-      packetizer_state <= IDLE;
       packet_counter_out <= "00000000000000";
+      packetizer_state <= IDLE;
       ------------------------------------------------
       N2P_FIFO  <= (others => (others=>'0'));
-
       N2P_FIFO_read_pointer  <= (others=>'0');
       N2P_FIFO_write_pointer <= (others=>'0');
+      N2P_read_en <= '0';
       credit_out <= '0';
       counter_register <= (others => '0');
-      N2P_read_en <= '0';
       flag_register <= (others =>'0');
       old_address <= (others =>'0');
       -------------------------------
@@ -184,12 +181,13 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       Rec_Packet_Lenght <= Rec_Packet_Lenght_in;
       depack_state <= depack_state_in;
    end if;
-end process;
+ end process;
 ---------------------------------------------------------------------------------------
 -- everything bellow this line is pure combinatorial!
 
 ------------------------------------------------------
---below this is code for communication from PE 2 NoC
+-- below this is code for communication from PE 2 NoC
+------------------------
 P2N_wr_byte_en: process(write_byte_enable, enable, address, storage, data_write, valid_data, P2N_write_en) begin
    storage_in <= storage ;
    valid_data_in <= valid_data;
@@ -215,52 +213,46 @@ P2N_wr_byte_en: process(write_byte_enable, enable, address, storage, data_write,
    if P2N_write_en = '1' then
       valid_data_in <= '0';
     end if;
+  end process;
 
-end process;
-
-P2N_FIFO_wr:process(storage, P2N_FIFO_write_pointer, P2N_FIFO) begin
+P2N_FIFO_wr:  process(storage, P2N_FIFO_write_pointer, P2N_FIFO) begin
     P2N_FIFO_in <= P2N_FIFO;
     P2N_FIFO_in(to_integer(unsigned(P2N_FIFO_write_pointer))) <= storage;
-end process;
-
-FIFO_Data_out <= P2N_FIFO(to_integer(unsigned(P2N_FIFO_read_pointer)));
-
+  end process;
 
 -- Write pointer update process (after each write operation, write pointer is rotated one bit to the left)
- P2N_wr_pointer:process(P2N_write_en, P2N_FIFO_write_pointer)begin
+P2N_wr_pointer: process(P2N_write_en, P2N_FIFO_write_pointer)begin
     if P2N_write_en = '1' then
        P2N_FIFO_write_pointer_in <= P2N_FIFO_write_pointer +1 ;
     else
        P2N_FIFO_write_pointer_in <= P2N_FIFO_write_pointer;
     end if;
   end process;
-
--- Read pointer update process (after each read operation, read pointer is rotated one bit to the left)
-P2N_rd_pointer:process(P2N_FIFO_read_pointer, grant)begin
+-- Read Pointer update process (after each read operation, read pointer is rotated one bit to the left)
+P2N_rd_pointer: process(P2N_FIFO_read_pointer, grant)begin
     P2N_FIFO_read_pointer_in <=  P2N_FIFO_read_pointer;
     if grant  = '1' then
       P2N_FIFO_read_pointer_in <= P2N_FIFO_read_pointer +1;
     end if;
-end process;
-
-P2N_wr_enable:process(P2N_full, valid_data) begin
+  end process;
+-- Processor to Network: FIFO Write enable
+P2N_wr_enable:  process(P2N_full, valid_data) begin
      if valid_data = '1' and P2N_full ='0' then
          P2N_write_en <= '1';
      else
          P2N_write_en <= '0';
      end if;
   end process;
-
+-- Processor to Network: FIFO empty slot counter
 P2N_Empty_slots_proc: process (P2N_FIFO_read_pointer, P2N_FIFO_write_pointer) begin
   if P2N_FIFO_read_pointer > P2N_FIFO_write_pointer then
       P2N_empty_slots <= std_logic_vector(to_unsigned(to_integer(unsigned(P2N_FIFO_read_pointer -  P2N_FIFO_write_pointer - 1)), NI_couter_size+1));
   else
       P2N_empty_slots <= std_logic_vector(to_unsigned(NI_depth-to_integer(unsigned(P2N_FIFO_write_pointer - P2N_FIFO_read_pointer)), NI_couter_size+1));
   end if;
-end process;
-
--- Process for updating full and empty signals
-P2N_Full_Empty:process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
+  end process;
+-- Processor to Network: updating full and empty signals
+P2N_Full_Empty: process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
       P2N_empty <= '0';
       P2N_full <= '0';
       if P2N_FIFO_read_pointer = P2N_FIFO_write_pointer  then
@@ -269,8 +261,8 @@ P2N_Full_Empty:process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
       if P2N_FIFO_write_pointer = P2N_FIFO_read_pointer - 1 then
               P2N_full <= '1';
       end if;
-end process;
-
+    end process;
+--Processor to Network: credit counter controller
 credit_counter_update: process (credit_in, credit_counter_out, grant)begin
     credit_counter_in <= credit_counter_out;
     if credit_in = '1' and grant = '1' then
@@ -280,11 +272,9 @@ credit_counter_update: process (credit_in, credit_counter_out, grant)begin
     elsif grant = '1' and credit_counter_out > 0 then
          credit_counter_in <= credit_counter_out - 1;
     end if;
-end process;
-
-
-
-Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)
+  end process;
+--Processor to Network: pacektizer
+Packetizer: process(P2N_empty, packetizer_state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)
     begin
         -- Some initializations
         TX <= (others => '0');
@@ -358,44 +348,41 @@ Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_lengt
             when others =>
                 packetizer_state_in <= IDLE;
         end case ;
+      end process;
 
-end procesS;
-
+FIFO_Data_out <= P2N_FIFO(to_integer(unsigned(P2N_FIFO_read_pointer)));
 ------------------------------------------------------
 --below this is code for communication from NoC 2 PE
-valid_out <= grant;
-N2P_Data_out <= N2P_FIFO(to_integer(unsigned(N2P_FIFO_read_pointer)));
+------------------------
 
 N2P_FIFO_wr:  process(RX, N2P_FIFO_write_pointer, N2P_FIFO) begin
       N2P_FIFO_in <= N2P_FIFO;
       N2P_FIFO_in(to_integer(unsigned(N2P_FIFO_write_pointer))) <= RX;
-end process;
+    end process;
 
-Proc_rd_enable:  process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
+Proc_rd_enable: process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
       if (address = reserved_address and write_byte_enable = "0000" and Rec_Valid = '1' and N2P_empty = '0') then
         N2P_read_en_in <= '1';
       else
         N2P_read_en_in <= '0';
       end if;
-end process;
+    end process;
 
-
-
-N2P_wr_pointer:  process(N2P_write_en, N2P_FIFO_write_pointer)begin
+N2P_wr_pointer: process(N2P_write_en, N2P_FIFO_write_pointer)begin
       if N2P_write_en = '1'then
          N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer + 1;
       else
          N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer;
       end if;
-end process;
+    end process;
 
-N2P_rd_pointer:  process(N2P_read_en,depack_read, N2P_empty, N2P_FIFO_read_pointer)begin
+N2P_rd_pointer: process(N2P_read_en,depack_read, N2P_empty, N2P_FIFO_read_pointer)begin
        if ((N2P_read_en = '1' or depack_read = '1') and N2P_empty = '0') then
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer + 1;
        else
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer;
        end if;
-end process;
+     end process;
 
 N2P_wr_en:  process(N2P_full, valid_in) begin
        if (valid_in = '1' and N2P_full ='0') then
@@ -403,9 +390,9 @@ N2P_wr_en:  process(N2P_full, valid_in) begin
        else
            N2P_write_en <= '0';
        end if;
-end process;
+     end process;
 
-N2P_Full_Empty:  process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
+N2P_Full_Empty: process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
         if N2P_FIFO_read_pointer = N2P_FIFO_write_pointer  then
                 N2P_empty <= '1';
         else
@@ -419,8 +406,7 @@ N2P_Full_Empty:  process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
         end if;
   end process;
 
-
-data_read_by_PE: process(N2P_read_en, N2P_Data_out, old_address, flag_register) begin
+data_read_by_PE:  process(N2P_read_en, N2P_Data_out, old_address, flag_register) begin
         if old_address = reserved_address and N2P_read_en = '1' then
           data_read <= N2P_Data_out;
         elsif old_address = flag_address then
@@ -430,10 +416,9 @@ data_read_by_PE: process(N2P_read_en, N2P_Data_out, old_address, flag_register) 
         else
           data_read <= (others => 'U');
         end if;
-end process;
+      end process;
 
-
-receoved_packet_counter:process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begin
+receoved_packet_counter:  process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begin
         counter_register_in <= counter_register;
         if N2P_write_en = '1' and RX(31 downto 29) = "001" and N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
         	counter_register_in <= counter_register;
@@ -442,7 +427,7 @@ receoved_packet_counter:process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begi
         elsif N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
         	counter_register_in <= counter_register -1;
         end if;
-end process;
+      end process;
 
 Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
         Rec_Destination_Address, Rec_MEM_Address, Rec_RightsAndOpCode,
@@ -524,7 +509,10 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
               end if;
           end case;
           file_close(RECEIVED_FILE);
-end process;
+        end process;
+
+valid_out <= grant;
+N2P_Data_out <= N2P_FIFO(to_integer(unsigned(N2P_FIFO_read_pointer)));
 
 flag_register_in(31)<=(not(Rec_Valid and not N2P_empty));
 flag_register_in(30) <= P2N_full;
