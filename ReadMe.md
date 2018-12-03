@@ -1,4 +1,4 @@
-This repository is targetting the problem of Denial of Service attacks on NoC based Socs.
+This repository is targeting the problem of Denial of Service attacks on NoC based Socs.
 
 ----------
 
