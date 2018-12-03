@@ -12,4 +12,13 @@ License:  	GNU GENERAL PUBLIC LICENSE Version 3
 - Siavoosh Payandeh Azad
 
 ---------------------------------
-The project documentation is maintained at [Project Wiki](https://github.com/Project-Bonfire/Secure_Bonfire/wiki).
+### Documentation
+
+The project documentation is maintained at [Project Wiki](https://github.com/Project-Bonfire/Secure_Bonfire/wiki). Each sub-project has a separate page with description and step-by-step guide for replicating the results.
+
+---------------------------------
+
+### Current Releases
+
+* Dec 2018: [CPRD Router](https://github.com/Project-Bonfire/Secure_Bonfire/releases/tag/CPRD)
+* Dec 2018: [Baseline Router](https://github.com/Project-Bonfire/Secure_Bonfire/releases/tag/Baseline_Router)
