@@ -40,6 +40,7 @@ def instantiate_routers(noc_file, network_dime_x, network_dime_y, fifo_depth, ro
                        ", valid_out_S_"+str(i)+", valid_out_L_"+str(i)+",\n")
         noc_file.write("\tcredit_out_N_"+str(i)+", credit_out_E_"+str(i)+", credit_out_W_"+str(i) +
                        ", credit_out_S_"+str(i)+", credit_out_L_"+str(i)+",\n")
+
         noc_file.write("\tTX_N_"+str(i)+", TX_E_"+str(i)+", TX_W_"+str(i)+", TX_S_"+str(i)+", TX_L_"+str(i))
         noc_file.write("); \n\n")
     noc_file.write("\n")

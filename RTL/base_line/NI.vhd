@@ -72,6 +72,7 @@ architecture logic of NI is
   signal P2N_full, P2N_empty: std_logic;
   signal P2N_empty_slots: std_logic_vector(NI_couter_size downto 0);
 
+
   signal credit_counter_in, credit_counter_out: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0);
   signal packet_counter_in, packet_counter_out: std_logic_vector(13 downto 0);
   signal packet_length_counter_in, packet_length_counter_out: std_logic_vector(13 downto 0);
@@ -87,6 +88,7 @@ architecture logic of NI is
   signal N2P_FIFO, N2P_FIFO_in : MEM;
 
   signal N2P_Data_out : std_logic_vector(31 downto 0);
+
 
   signal N2P_FIFO_read_pointer, N2P_FIFO_read_pointer_in: std_logic_vector(NI_couter_size-1 downto 0);
   signal N2P_FIFO_write_pointer, N2P_FIFO_write_pointer_in: std_logic_vector(NI_couter_size-1 downto 0);
@@ -107,6 +109,9 @@ architecture logic of NI is
   signal Rec_Packet_ID, Rec_Packet_ID_in                      : std_logic_vector(13 downto 0);
   signal Rec_Packet_Lenght, Rec_Packet_Lenght_in              : std_logic_vector(13 downto 0);
 
+  signal main_counter                                         : unsigned(27 downto 0);
+  signal pres_timestamp, next_timestamp                       : unsigned(27 downto 0);
+
   constant max_credit_counter_value: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := std_logic_vector(to_unsigned(FIFO_DEPTH-1, CREDIT_COUNTER_LENGTH));
   constant all_zeros: std_logic_vector(CREDIT_COUNTER_LENGTH-1 downto 0) := (others => '0');
 
@@ -121,15 +126,16 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       P2N_FIFO  <= (others => (others=>'0'));
       credit_counter_out <= max_credit_counter_value;
       packet_length_counter_out <= "00000000000000";
-      packet_counter_out <= "00000000000000";
       packetizer_state <= IDLE;
+      packet_counter_out <= "00000000000000";
       ------------------------------------------------
       N2P_FIFO  <= (others => (others=>'0'));
+
       N2P_FIFO_read_pointer  <= (others=>'0');
       N2P_FIFO_write_pointer <= (others=>'0');
-      N2P_read_en <= '0';
       credit_out <= '0';
       counter_register <= (others => '0');
+      N2P_read_en <= '0';
       flag_register <= (others =>'0');
       old_address <= (others =>'0');
       -------------------------------
@@ -141,6 +147,8 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       Rec_Packet_ID <= (others =>'0');
       Rec_Packet_Lenght <= (others =>'0');
       depack_state <= IDLE_input;
+      main_counter <= (others => '0');
+      pres_timestamp <= (others => '0');
    elsif clk'event and clk = '1'  then
       old_address <= address;
       P2N_FIFO_write_pointer <= P2N_FIFO_write_pointer_in;
@@ -180,22 +188,43 @@ Clk_proc: process(clk, enable, write_byte_enable) begin
       Rec_Packet_ID <= Rec_Packet_ID_in;
       Rec_Packet_Lenght <= Rec_Packet_Lenght_in;
       depack_state <= depack_state_in;
+
+      if main_counter /= "1111111111111111111111111111" then
+        main_counter <= main_counter + 1;
+      else
+        main_counter <= (others => '0');
+      end if;
+      pres_timestamp <= next_timestamp;
+      
    end if;
- end process;
+end process;
 ---------------------------------------------------------------------------------------
 -- everything bellow this line is pure combinatorial!
 
 ------------------------------------------------------
--- below this is code for communication from PE 2 NoC
-------------------------
-P2N_wr_byte_en: process(write_byte_enable, enable, address, storage, data_write, valid_data, P2N_write_en) begin
+--below this is code for communication from PE 2 NoC
+P2N_wr_byte_en: process(write_byte_enable, enable, address, storage, data_write, valid_data, P2N_write_en, main_counter) 
+    variable v_timestamp : unsigned(27 downto 0);
+begin
    storage_in <= storage ;
    valid_data_in <= valid_data;
    -- If PE wants to send data to NoC via NI (data is valid)
    if enable = '1' and address = reserved_address then
+
       if write_byte_enable /= "0000" then
         valid_data_in <= '1';
+
+        if data_write(31 downto 29) = "001" then
+            v_timestamp := main_counter;
+        end if;
+
       end if;
+
+      if data_write(31 downto 29) = "111" then
+          storage_in(27 downto 0) <= std_logic_vector(v_timestamp);
+
+      else
+
       if write_byte_enable(0) = '1' then
          storage_in(7 downto 0) <= data_write(7 downto 0);
       end if;
@@ -207,52 +236,60 @@ P2N_wr_byte_en: process(write_byte_enable, enable, address, storage, data_write,
       end if;
       if write_byte_enable(3) = '1' then
          storage_in(31 downto 24) <= data_write(31 downto 24);
-    end if;
+      end if;
+
+      end if;
    end if;
 
    if P2N_write_en = '1' then
       valid_data_in <= '0';
     end if;
-  end process;
 
-P2N_FIFO_wr:  process(storage, P2N_FIFO_write_pointer, P2N_FIFO) begin
+end process;
+
+P2N_FIFO_wr:process(storage, P2N_FIFO_write_pointer, P2N_FIFO) begin
     P2N_FIFO_in <= P2N_FIFO;
     P2N_FIFO_in(to_integer(unsigned(P2N_FIFO_write_pointer))) <= storage;
-  end process;
+end process;
+
+FIFO_Data_out <= P2N_FIFO(to_integer(unsigned(P2N_FIFO_read_pointer)));
+
 
 -- Write pointer update process (after each write operation, write pointer is rotated one bit to the left)
-P2N_wr_pointer: process(P2N_write_en, P2N_FIFO_write_pointer)begin
+ P2N_wr_pointer:process(P2N_write_en, P2N_FIFO_write_pointer)begin
     if P2N_write_en = '1' then
        P2N_FIFO_write_pointer_in <= P2N_FIFO_write_pointer +1 ;
     else
        P2N_FIFO_write_pointer_in <= P2N_FIFO_write_pointer;
     end if;
   end process;
--- Read Pointer update process (after each read operation, read pointer is rotated one bit to the left)
-P2N_rd_pointer: process(P2N_FIFO_read_pointer, grant)begin
+
+-- Read pointer update process (after each read operation, read pointer is rotated one bit to the left)
+P2N_rd_pointer:process(P2N_FIFO_read_pointer, grant)begin
     P2N_FIFO_read_pointer_in <=  P2N_FIFO_read_pointer;
     if grant  = '1' then
       P2N_FIFO_read_pointer_in <= P2N_FIFO_read_pointer +1;
     end if;
-  end process;
--- Processor to Network: FIFO Write enable
-P2N_wr_enable:  process(P2N_full, valid_data) begin
+end process;
+
+P2N_wr_enable:process(P2N_full, valid_data) begin
      if valid_data = '1' and P2N_full ='0' then
          P2N_write_en <= '1';
      else
          P2N_write_en <= '0';
      end if;
   end process;
--- Processor to Network: FIFO empty slot counter
+
 P2N_Empty_slots_proc: process (P2N_FIFO_read_pointer, P2N_FIFO_write_pointer) begin
   if P2N_FIFO_read_pointer > P2N_FIFO_write_pointer then
       P2N_empty_slots <= std_logic_vector(to_unsigned(to_integer(unsigned(P2N_FIFO_read_pointer -  P2N_FIFO_write_pointer - 1)), NI_couter_size+1));
   else
       P2N_empty_slots <= std_logic_vector(to_unsigned(NI_depth-to_integer(unsigned(P2N_FIFO_write_pointer - P2N_FIFO_read_pointer)), NI_couter_size+1));
   end if;
-  end process;
--- Processor to Network: updating full and empty signals
-P2N_Full_Empty: process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
+end process;
+
+-- Process for updating full and empty signals
+P2N_Full_Empty:process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
       P2N_empty <= '0';
       P2N_full <= '0';
       if P2N_FIFO_read_pointer = P2N_FIFO_write_pointer  then
@@ -261,8 +298,8 @@ P2N_Full_Empty: process(P2N_FIFO_write_pointer, P2N_FIFO_read_pointer) begin
       if P2N_FIFO_write_pointer = P2N_FIFO_read_pointer - 1 then
               P2N_full <= '1';
       end if;
-    end process;
---Processor to Network: credit counter controller
+end process;
+
 credit_counter_update: process (credit_in, credit_counter_out, grant)begin
     credit_counter_in <= credit_counter_out;
     if credit_in = '1' and grant = '1' then
@@ -272,9 +309,11 @@ credit_counter_update: process (credit_in, credit_counter_out, grant)begin
     elsif grant = '1' and credit_counter_out > 0 then
          credit_counter_in <= credit_counter_out - 1;
     end if;
-  end process;
---Processor to Network: pacektizer
-Packetizer: process(P2N_empty, packetizer_state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)
+end process;
+
+
+Packetizer:process(P2N_empty, packetizer_state, credit_counter_out, packet_length_counter_out, packet_counter_out, FIFO_Data_out)--, main_counter)
+--        variable v_timestamp : unsigned(27 downto 0);
     begin
         -- Some initializations
         TX <= (others => '0');
@@ -292,6 +331,7 @@ Packetizer: process(P2N_empty, packetizer_state, credit_counter_out, packet_leng
 
             when HEADER_FLIT =>
                 if credit_counter_out /= all_zeros and P2N_empty = '0' then
+--                    v_timestamp := main_counter;
                     grant <= '1';
                     --FIFO_Data_out(19 downto 0) contains the following: Destination Y- 4 bits, Destination X-4 bits, Mem_address_1 12bit
                     TX <= "001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0) & XOR_REDUCE("001" & std_logic_vector(to_unsigned(current_y, 4)) & std_logic_vector(to_unsigned(current_x, 4)) & FIFO_Data_out(19 downto 0));
@@ -310,7 +350,7 @@ Packetizer: process(P2N_empty, packetizer_state, credit_counter_out, packet_leng
 
             when BODY_FLIT_2 =>
                   if credit_counter_out /= all_zeros and P2N_empty = '0'then
-                    packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))-3;
+                    packet_length_counter_in <=   (FIFO_Data_out(27 downto 14))+1;
                     grant <= '1';
                     -- FIFO_Data_out(27 downto 14) contains the packet length
                     -- FIFO_Data_out(13 downto 0) is used for passing the packet_counter_out from PE and we can compare here! or reuse it for other purpose
@@ -322,12 +362,22 @@ Packetizer: process(P2N_empty, packetizer_state, credit_counter_out, packet_leng
 
             when BODY_FLIT =>
                 if credit_counter_out /= all_zeros and P2N_empty = '0'then
-                    grant <= '1';
-                    TX <= "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("010" & FIFO_Data_out(27 downto 0));
-                    packet_length_counter_in <= packet_length_counter_out - 1;
 
-                    if packet_length_counter_out > 2 then
+                    --TX <= "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("010" & FIFO_Data_out(27 downto 0));
+--                    if packet_length_counter_out = 1 then
+--                        grant <= '1';
+--                        TX <= "010" & std_logic_vector(v_timestamp) & XOR_REDUCE("010" & std_logic_vector(v_timestamp));
+--                        --TX <= "010" & "11111111111111111111111111111";
+--                    else
+                        grant <= '1';
+                        TX <= "010" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("010" & FIFO_Data_out(27 downto 0));
+--                    end if;
+
+
+
+                    if packet_length_counter_out > 1 then
                       packetizer_state_in <= BODY_FLIT;
+                      packet_length_counter_in <= packet_length_counter_out - 1;
                     else
                       packetizer_state_in <= TAIL_FLIT;
                     end if;
@@ -338,8 +388,8 @@ Packetizer: process(P2N_empty, packetizer_state, credit_counter_out, packet_leng
             when TAIL_FLIT =>
                 if credit_counter_out /= all_zeros and P2N_empty = '0' then
                     grant <= '1';
-                    packet_length_counter_in <= packet_length_counter_out - 1;
                     TX <= "100" & FIFO_Data_out(27 downto 0) & XOR_REDUCE("100" & FIFO_Data_out(27 downto 0));
+                    --TX <= "100" & "00000000000000000000000000001";
                     packet_counter_in <= packet_counter_out +1;
                     packetizer_state_in <= IDLE;
                 else
@@ -348,41 +398,44 @@ Packetizer: process(P2N_empty, packetizer_state, credit_counter_out, packet_leng
             when others =>
                 packetizer_state_in <= IDLE;
         end case ;
-      end process;
 
-FIFO_Data_out <= P2N_FIFO(to_integer(unsigned(P2N_FIFO_read_pointer)));
+end procesS;
+
 ------------------------------------------------------
 --below this is code for communication from NoC 2 PE
-------------------------
+valid_out <= grant;
+N2P_Data_out <= N2P_FIFO(to_integer(unsigned(N2P_FIFO_read_pointer)));
 
 N2P_FIFO_wr:  process(RX, N2P_FIFO_write_pointer, N2P_FIFO) begin
       N2P_FIFO_in <= N2P_FIFO;
       N2P_FIFO_in(to_integer(unsigned(N2P_FIFO_write_pointer))) <= RX;
-    end process;
+end process;
 
-Proc_rd_enable: process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
+Proc_rd_enable:  process(address, write_byte_enable, N2P_empty, Rec_Valid)begin
       if (address = reserved_address and write_byte_enable = "0000" and Rec_Valid = '1' and N2P_empty = '0') then
         N2P_read_en_in <= '1';
       else
         N2P_read_en_in <= '0';
       end if;
-    end process;
+end process;
 
-N2P_wr_pointer: process(N2P_write_en, N2P_FIFO_write_pointer)begin
+
+
+N2P_wr_pointer:  process(N2P_write_en, N2P_FIFO_write_pointer)begin
       if N2P_write_en = '1'then
          N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer + 1;
       else
          N2P_FIFO_write_pointer_in <= N2P_FIFO_write_pointer;
       end if;
-    end process;
+end process;
 
-N2P_rd_pointer: process(N2P_read_en,depack_read, N2P_empty, N2P_FIFO_read_pointer)begin
+N2P_rd_pointer:  process(N2P_read_en,depack_read, N2P_empty, N2P_FIFO_read_pointer)begin
        if ((N2P_read_en = '1' or depack_read = '1') and N2P_empty = '0') then
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer + 1;
        else
            N2P_FIFO_read_pointer_in <= N2P_FIFO_read_pointer;
        end if;
-     end process;
+end process;
 
 N2P_wr_en:  process(N2P_full, valid_in) begin
        if (valid_in = '1' and N2P_full ='0') then
@@ -390,9 +443,9 @@ N2P_wr_en:  process(N2P_full, valid_in) begin
        else
            N2P_write_en <= '0';
        end if;
-     end process;
+end process;
 
-N2P_Full_Empty: process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
+N2P_Full_Empty:  process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
         if N2P_FIFO_read_pointer = N2P_FIFO_write_pointer  then
                 N2P_empty <= '1';
         else
@@ -406,7 +459,8 @@ N2P_Full_Empty: process(N2P_FIFO_write_pointer, N2P_FIFO_read_pointer) begin
         end if;
   end process;
 
-data_read_by_PE:  process(N2P_read_en, N2P_Data_out, old_address, flag_register) begin
+
+data_read_by_PE: process(N2P_read_en, N2P_Data_out, old_address, flag_register) begin
         if old_address = reserved_address and N2P_read_en = '1' then
           data_read <= N2P_Data_out;
         elsif old_address = flag_address then
@@ -416,9 +470,10 @@ data_read_by_PE:  process(N2P_read_en, N2P_Data_out, old_address, flag_register)
         else
           data_read <= (others => 'U');
         end if;
-      end process;
+end process;
 
-receoved_packet_counter:  process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begin
+
+receoved_packet_counter:process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)begin
         counter_register_in <= counter_register;
         if N2P_write_en = '1' and RX(31 downto 29) = "001" and N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
         	counter_register_in <= counter_register;
@@ -427,7 +482,7 @@ receoved_packet_counter:  process(N2P_write_en, N2P_read_en, RX, N2P_Data_out)be
         elsif N2P_read_en = '1' and N2P_Data_out(31 downto 29) = "100" then
         	counter_register_in <= counter_register -1;
         end if;
-      end process;
+end process;
 
 Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
         Rec_Destination_Address, Rec_MEM_Address, Rec_RightsAndOpCode,
@@ -454,7 +509,6 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
         -------------------------------------------------
         case depack_state is
           when IDLE_input =>
-              flit_counter := 0;
               if N2P_Data_out(31 downto 29) = "001" and N2P_empty = '0'  then
                 --here we read header
                   depack_state_in <= Header;
@@ -466,7 +520,7 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
                   depack_read <= '1';
               end if;
           when Header =>
-              flit_counter := 1;
+              flit_counter := 0;
               if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
                 --here we read body 1
                   depack_state_in <= Body_1;
@@ -475,7 +529,6 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
                   depack_read <= '1';
               end if;
           when Body_1 =>
-              flit_counter := 2;
               if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0'  then
                 --here we read body 2
                 depack_state_in <= other_body;
@@ -484,9 +537,10 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
                 receive_packet_length := to_integer(unsigned(N2P_Data_out(28 downto 15)));
                 receive_packet_id := to_integer(unsigned(N2P_Data_out(14 downto 1)));
                 depack_read <= '1';
-                flit_counter := flit_counter+1;
+                --flit_counter := flit_counter+1;
               end if;
           when other_body =>
+
               Rec_Valid_in <= '1';
               -- here we have only payload!
               if N2P_Data_out(31 downto 29) = "010" and N2P_empty = '0' and N2P_read_en = '1'  then
@@ -496,23 +550,20 @@ Depacketizer: process(N2P_Data_out, depack_state, N2P_empty, Rec_Source_Address,
                 depack_state_in <= IDLE_input;
                 Rec_Valid_in <= '0';
                 flit_counter := flit_counter+1;
-                assert (flit_counter = receive_packet_length ) report "wrong packet size at node "& integer'image(current_x+current_y*network_x) &
-                                                                      "packet length:"& integer'image(receive_packet_length) &
+                assert (flit_counter = receive_packet_length+2) report "wrong packet size at node "& integer'image(current_x+current_y*network_x) &
+                                                                      " packet length:"& integer'image(receive_packet_length) &
                                                                       " actual length: "& integer'image(flit_counter)  severity failure;
 
                 assert (receive_destination_node = (current_x+current_y*network_x)) report "wrong destination recived at node "& integer'image(current_x+current_y*network_x) &
                                                                       " recived dest: "& integer'image(receive_destination_node) severity failure;
                 write(RECEIVED_LINEVARIABLE, "Packet received at " & time'image(now) & " From: " & integer'image(receive_source_node) &
                                              " to: " & integer'image(receive_destination_node) & " length: "& integer'image(receive_packet_length) &
-                                             " actual length: "& integer'image(flit_counter) &  " id: "& integer'image(receive_packet_id));
+                                             " actual length: "& integer'image(flit_counter-2) &  " id: "& integer'image(receive_packet_id));
                 writeline(RECEIVED_FILE, RECEIVED_LINEVARIABLE);
               end if;
           end case;
           file_close(RECEIVED_FILE);
-        end process;
-
-valid_out <= grant;
-N2P_Data_out <= N2P_FIFO(to_integer(unsigned(N2P_FIFO_read_pointer)));
+end process;
 
 flag_register_in(31)<=(not(Rec_Valid and not N2P_empty));
 flag_register_in(30) <= P2N_full;
@@ -521,3 +572,4 @@ flag_register_in(29-NI_couter_size-1 downto 0) <= (others => '0');
 
 irq_out <= '0';
 end; --architecture logic
+

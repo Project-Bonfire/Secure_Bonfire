@@ -55,14 +55,20 @@ if CB_Package.add_tracker:
         node_x = i % CB_Package.network_dime_x
         node_y = i / CB_Package.network_dime_x
         for input_port  in ['N', 'E', 'W', 'S', 'L']:
-            noc_file.write("F_T_"+str(i)+"_"+input_port+": flit_tracker  generic map (\n")
-            noc_file.write("        DATA_WIDTH => DATA_WIDTH, \n")
-            noc_file.write("        tracker_file =>\"traces/track"+str(i)+"_"+input_port+".txt\"\n")
-            noc_file.write("    )\n")
-            noc_file.write("    port map (\n")
-            noc_file.write("        clk => clk, RX => RX_"+input_port+"_"+str(i)+", \n")
-            noc_file.write("        valid_in => valid_in_"+input_port+"_"+str(i)+"\n")
-            noc_file.write("    );\n")
+            if (node_x == 0 and  input_port == 'W') or (node_x == CB_Package.network_dime_x-1 and  input_port == 'E') or \
+               (node_y == 0 and  input_port == 'N') or (node_y == CB_Package.network_dime_y-1 and  input_port == 'S'):
+               pass
+            else:
+                noc_file.write("F_T_"+str(i)+"_"+input_port+": flit_tracker  generic map (\n")
+                noc_file.write("        G_DATA_WIDTH   => DATA_WIDTH, \n")
+                noc_file.write("        G_NET_SIZE_X   => "+str(CB_Package.network_dime_x)+", \n")
+                noc_file.write("        G_NET_SIZE_Y   => "+str(CB_Package.network_dime_y)+", \n")
+                noc_file.write("        G_TRACKER_FILE =>\"traces/track"+str(i)+"_"+input_port+".txt\"\n")
+                noc_file.write("    )\n")
+                noc_file.write("    port map (\n")
+                noc_file.write("        clk => clk, reset => reset, rx_in => RX_"+input_port+"_"+str(i)+", \n")
+                noc_file.write("        valid_in => valid_in_"+input_port+"_"+str(i)+"\n")
+                noc_file.write("    );\n")
 
 noc_file.write("---------------------------------------------------------------\n")
 noc_file.write("-- binding the routers together\n")

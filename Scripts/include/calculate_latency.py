@@ -5,7 +5,7 @@ import random
 from package import SIMUL_DIR
 import sys
 
-warmup_time = 1000
+warmup_time = 20000
 
 if '--help' in sys.argv[1:]:
     print "\t-S [path to file]: path to file containing all the sent packets."

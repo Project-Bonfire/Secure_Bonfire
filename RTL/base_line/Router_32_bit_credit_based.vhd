@@ -39,6 +39,7 @@ end router_credit_based;
 architecture behavior of router_credit_based is
 
     signal FIFO_D_out_N, FIFO_D_out_E, FIFO_D_out_W, FIFO_D_out_S, FIFO_D_out_L: std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal RX_N_mod, RX_E_mod, RX_W_mod, RX_S_mod, RX_L_mod : std_logic_vector (DATA_WIDTH-1 downto 0);
 
     signal Grant_NN, Grant_NE, Grant_NW, Grant_NS, Grant_NL: std_logic;
     signal Grant_EN, Grant_EE, Grant_EW, Grant_ES, Grant_EL: std_logic;
@@ -56,6 +57,8 @@ architecture behavior of router_credit_based is
 
     signal Xbar_sel_N, Xbar_sel_E, Xbar_sel_W, Xbar_sel_S, Xbar_sel_L: std_logic_vector(4 downto 0);
 
+    signal req_from_n, req_from_e, req_from_w, req_from_s, req_from_l: std_logic_vector (4 downto 0);   
+    signal grant_for_n, grant_for_e, grant_for_w, grant_for_s, grant_for_l: std_logic_vector (4 downto 0);   
 begin
 
 ------------------------------------------------------------------------------------------------------------------------------
@@ -63,37 +66,97 @@ begin
 -- all the FIFOs
 FIFO_N: FIFO_credit_based
     generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
-    port map ( reset => reset, clk => clk, RX => RX_N, valid_in => valid_in_N,
+    port map ( reset => reset, clk => clk, RX => RX_N_mod, valid_in => valid_in_N,
             read_en_N => '0', read_en_E =>Grant_EN, read_en_W =>Grant_WN, read_en_S =>Grant_SN, read_en_L =>Grant_LN,
             credit_out => credit_out_N, empty_out => empty_N, Data_out => FIFO_D_out_N);
 
 FIFO_E: FIFO_credit_based
     generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
-    port map ( reset => reset, clk => clk, RX => RX_E, valid_in => valid_in_E,
+    port map ( reset => reset, clk => clk, RX => RX_E_mod, valid_in => valid_in_E,
             read_en_N => Grant_NE, read_en_E =>'0', read_en_W =>Grant_WE, read_en_S =>Grant_SE, read_en_L =>Grant_LE,
             credit_out => credit_out_E, empty_out => empty_E, Data_out => FIFO_D_out_E);
 
 FIFO_W: FIFO_credit_based
     generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
-    port map ( reset => reset, clk => clk, RX => RX_W, valid_in => valid_in_W,
+    port map ( reset => reset, clk => clk, RX => RX_W_mod, valid_in => valid_in_W,
             read_en_N => Grant_NW, read_en_E =>Grant_EW, read_en_W =>'0', read_en_S =>Grant_SW, read_en_L =>Grant_LW,
             credit_out => credit_out_W, empty_out => empty_W, Data_out => FIFO_D_out_W);
 
 FIFO_S: FIFO_credit_based
     generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
-    port map ( reset => reset, clk => clk, RX => RX_S, valid_in => valid_in_S,
+    port map ( reset => reset, clk => clk, RX => RX_S_mod, valid_in => valid_in_S,
             read_en_N => Grant_NS, read_en_E =>Grant_ES, read_en_W =>Grant_WS, read_en_S =>'0', read_en_L =>Grant_LS,
             credit_out => credit_out_S, empty_out => empty_S, Data_out => FIFO_D_out_S);
 
 FIFO_L: FIFO_credit_based
     generic map ( DATA_WIDTH => DATA_WIDTH, FIFO_DEPTH => FIFO_DEPTH)
-    port map ( reset => reset, clk => clk, RX => RX_L, valid_in => valid_in_L,
+    port map ( reset => reset, clk => clk, RX => RX_L_mod, valid_in => valid_in_L,
             read_en_N => Grant_NL, read_en_E =>Grant_EL, read_en_W =>Grant_WL, read_en_S => Grant_SL, read_en_L =>'0',
             credit_out => credit_out_L, empty_out => empty_L, Data_out => FIFO_D_out_L);
 ------------------------------------------------------------------------------------------------------------------------------
-------------------------------------------------------------------------------------------------------------------------------
 
+------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------
+-- all the Dos Monitors
+
+dos_monitor_N: dos_monitor
+    generic map ( G_DATA_WIDTH => DATA_WIDTH, G_ROUTER_ADDRESS => current_address, G_MONITORED_INPUT => "10000")
+    port map ( reset => reset, clk => clk, rx_in => RX_N, valid_in => valid_in_N,
+               fifo_data_in => FIFO_D_out_N, 
+               req_from_n_in => req_from_n, req_from_e_in => req_from_e, req_from_w_in => req_from_w, req_from_s_in => req_from_s, req_from_l_in => req_from_l, 
+               grant_for_n_in => grant_for_n, grant_for_e_in => grant_for_e, grant_for_w_in => grant_for_w, grant_for_s_in => grant_for_s, grant_for_l_in => grant_for_l,  
+               tx_out => RX_N_mod);
+
+dos_monitor_E: dos_monitor
+    generic map ( G_DATA_WIDTH => DATA_WIDTH, G_ROUTER_ADDRESS => current_address, G_MONITORED_INPUT => "01000")
+    port map ( reset => reset, clk => clk, rx_in => RX_E, valid_in => valid_in_E,
+               fifo_data_in => FIFO_D_out_E, 
+               req_from_n_in => req_from_n, req_from_e_in => req_from_e, req_from_w_in => req_from_w, req_from_s_in => req_from_s, req_from_l_in => req_from_l, 
+               grant_for_n_in => grant_for_n, grant_for_e_in => grant_for_e, grant_for_w_in => grant_for_w, grant_for_s_in => grant_for_s, grant_for_l_in => grant_for_l,  
+               tx_out => RX_E_mod);
+
+dos_monitor_W: dos_monitor
+    generic map ( G_DATA_WIDTH => DATA_WIDTH, G_ROUTER_ADDRESS => current_address, G_MONITORED_INPUT => "00100")
+    port map ( reset => reset, clk => clk, rx_in => RX_W, valid_in => valid_in_W,
+               fifo_data_in => FIFO_D_out_W, 
+               req_from_n_in => req_from_n, req_from_e_in => req_from_e, req_from_w_in => req_from_w, req_from_s_in => req_from_s, req_from_l_in => req_from_l, 
+               grant_for_n_in => grant_for_n, grant_for_e_in => grant_for_e, grant_for_w_in => grant_for_w, grant_for_s_in => grant_for_s, grant_for_l_in => grant_for_l,  
+               tx_out => RX_W_mod);
+
+dos_monitor_S: dos_monitor
+    generic map ( G_DATA_WIDTH => DATA_WIDTH, G_ROUTER_ADDRESS => current_address, G_MONITORED_INPUT => "00010")
+    port map ( reset => reset, clk => clk, rx_in => RX_S, valid_in => valid_in_S,
+               fifo_data_in => FIFO_D_out_S, 
+               req_from_n_in => req_from_n, req_from_e_in => req_from_e, req_from_w_in => req_from_w, req_from_s_in => req_from_s, req_from_l_in => req_from_l, 
+               grant_for_n_in => grant_for_n, grant_for_e_in => grant_for_e, grant_for_w_in => grant_for_w, grant_for_s_in => grant_for_s, grant_for_l_in => grant_for_l,  
+               tx_out => RX_S_mod);
+
+dos_monitor_L: dos_monitor
+    generic map ( G_DATA_WIDTH => DATA_WIDTH, G_ROUTER_ADDRESS => current_address, G_MONITORED_INPUT => "00001")
+    port map ( reset => reset, clk => clk, rx_in => RX_L, valid_in => valid_in_L,
+               fifo_data_in => FIFO_D_out_L, 
+               req_from_n_in => req_from_n, req_from_e_in => req_from_e, req_from_w_in => req_from_w, req_from_s_in => req_from_s, req_from_l_in => req_from_l, 
+               grant_for_n_in => grant_for_n, grant_for_e_in => grant_for_e, grant_for_w_in => grant_for_w, grant_for_s_in => grant_for_s, grant_for_l_in => grant_for_l,  
+               tx_out => RX_L_mod);
+
+-- Concatenation of requests per input port
+req_from_n <= Req_NN & Req_NE & Req_NW & Req_NS & Req_NL;
+req_from_e <= Req_EN & Req_EE & Req_EW & Req_ES & Req_EL;
+req_from_w <= Req_WN & Req_WE & Req_WW & Req_WS & Req_WL;
+req_from_s <= Req_SN & Req_SE & Req_SW & Req_SS & Req_SL;
+req_from_l <= Req_LN & Req_LE & Req_LW & Req_LS & Req_LL;
+
+-- Concatenation of grants per output port
+grant_for_n <= Grant_NN & Grant_NE & Grant_NW & Grant_NS & Grant_NL;
+grant_for_e <= Grant_EN & Grant_EE & Grant_EW & Grant_ES & Grant_EL;
+grant_for_w <= Grant_WN & Grant_WE & Grant_WW & Grant_WS & Grant_WL;
+grant_for_s <= Grant_SN & Grant_SE & Grant_SW & Grant_SS & Grant_SL;
+grant_for_l <= Grant_LN & Grant_LE & Grant_LW & Grant_LS & Grant_LL;
+
+------------------------------------------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------------------------------------------
 -- all the LBDRs
+
 LBDR_N: LBDR generic map (Rxy_rst => Rxy_rst, Cx_rst => Cx_rst)
        PORT MAP (reset => reset, clk => clk, empty => empty_N,
              flit_type => FIFO_D_out_N(DATA_WIDTH-1 downto DATA_WIDTH-3),
@@ -202,5 +265,4 @@ XBAR_S: XBAR generic map (DATA_WIDTH  => DATA_WIDTH)
 XBAR_L: XBAR generic map (DATA_WIDTH  => DATA_WIDTH)
    PORT MAP (North_in => FIFO_D_out_N, East_in => FIFO_D_out_E, West_in => FIFO_D_out_W, South_in => FIFO_D_out_S, Local_in => FIFO_D_out_L,
         sel => Xbar_sel_L,  Data_out=> TX_L);
-
 end;

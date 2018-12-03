@@ -20,8 +20,8 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 package router_pack is
-  
-  component FIFO_credit_based
+
+    COMPONENT FIFO_credit_based
   generic (
         DATA_WIDTH: integer := 32;
         FIFO_DEPTH: integer := 4 -- FIFO counter size for read and write pointers would also be the same as FIFO depth, because of one-hot encoding of them!
@@ -38,9 +38,32 @@ package router_pack is
             credit_out: out std_logic;
             empty_out: out std_logic;
             Data_out: out std_logic_vector(DATA_WIDTH-1 downto 0)
-    );end component;
+    );
+  end COMPONENT;
 
-  component allocator is
+  COMPONENT dos_monitor is
+    generic (
+        G_DATA_WIDTH: integer := 32;
+        G_ROUTER_ADDRESS: integer := 0;
+        G_MONITORED_INPUT : std_logic_vector (4 downto 0)
+    );
+    port (
+        -- Control signals
+        reset, clk: in std_logic;
+
+        -- Input signals
+        valid_in : in std_logic;
+        rx_in : in std_logic_vector (G_DATA_WIDTH-1 downto 0);
+        fifo_data_in : in std_logic_vector (G_DATA_WIDTH-1 downto 0);
+        --grant_n_in, grant_e_in, grant_w_in, grant_s_in, grant_l_in : in std_logic; 
+        req_from_n_in, req_from_e_in, req_from_w_in, req_from_s_in, req_from_l_in  : in std_logic_vector (4 downto 0);
+        grant_for_n_in, grant_for_e_in, grant_for_w_in, grant_for_s_in, grant_for_l_in  : in std_logic_vector (4 downto 0);
+        -- Output signal
+        tx_out : out std_logic_vector (G_DATA_WIDTH-1 downto 0)
+    );
+  end COMPONENT;
+
+COMPONENT allocator is
     generic (
         FIFO_DEPTH: integer := 4;
         CREDIT_COUNTER_LENGTH: integer := 4;
@@ -66,9 +89,10 @@ package router_pack is
             grant_W_N, grant_W_E, grant_W_W, grant_W_S, grant_W_L: out std_logic;
             grant_S_N, grant_S_E, grant_S_W, grant_S_S, grant_S_L: out std_logic;
             grant_L_N, grant_L_E, grant_L_W, grant_L_S, grant_L_L: out std_logic
-            );end component;
+            );
+end COMPONENT;
 
-  component LBDR is
+COMPONENT LBDR is
     generic (
         cur_addr_rst: integer := 8;
         Rxy_rst: integer := 8;
@@ -82,9 +106,10 @@ package router_pack is
             dst_addr_y, dst_addr_x: in std_logic_vector(3 downto 0);
             grant_N, grant_E, grant_W, grant_S, grant_L: in std_logic;
             Req_N, Req_E, Req_W, Req_S, Req_L:out std_logic
-            );end component;
+            );
+end COMPONENT;
 
-  component XBAR is
+  COMPONENT XBAR is
     generic (
         DATA_WIDTH: integer := 32
     );
@@ -96,7 +121,8 @@ package router_pack is
         Local_in: in std_logic_vector(DATA_WIDTH-1 downto 0);
         sel: in std_logic_vector (4 downto 0);
         Data_out: out std_logic_vector(DATA_WIDTH-1 downto 0)
-    );end component;
+    );
+  end COMPONENT;
 
   component NI is
    generic(FIFO_DEPTH: in integer := 4;
@@ -131,28 +157,6 @@ package router_pack is
         RX: in std_logic_vector(31 downto 0)  -- data recieved form the NoC
 
   );
-  end component;
-
-  component arbiter_in is
-    generic (
-        CREDIT_COUNTER_LENGTH: integer := 2
-    );
-    port (  reset: in  std_logic;
-            clk: in  std_logic;
-            Req_X_N, Req_X_E, Req_X_W, Req_X_S, Req_X_L:in std_logic; -- From LBDR modules
-            credit_counter_N, credit_counter_E, credit_counter_W, credit_counter_S: in std_logic_vector (CREDIT_COUNTER_LENGTH-1 downto 0);
-            X_N, X_E, X_W, X_S, X_L:out std_logic -- Grants given to LBDR requests (encoded as one-hot)
-            );end component;
-
-  component arbiter_out is
-    generic (
-        CREDIT_COUNTER_LENGTH: integer := 2
-    );
-    port (  reset: in  std_logic;
-            clk: in  std_logic;
-            X_N_Y, X_E_Y, X_W_Y, X_S_Y, X_L_Y:in std_logic; -- From LBDR modules
-            credit: in std_logic_vector(CREDIT_COUNTER_LENGTH - 1 downto 0);
-            grant_Y_N, grant_Y_E, grant_Y_W, grant_Y_S, grant_Y_L :out std_logic -- Grants given to LBDR requests (encoded as one-hot)
-            );end component;
+end component; --entity NI
 
 end; --package body
