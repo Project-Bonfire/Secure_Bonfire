@@ -193,36 +193,36 @@ if add_NI:
     noc_file.write("\tsignal reconfiguration_address : std_logic_vector(29 downto 0):= \"000000000000000010000000000010\";  -- reserved address for reconfiguration register\n")
     noc_file.write("\tsignal self_diagnosis_address :  std_logic_vector(29 downto 0):= \"000000000000000010000000000011\";\n")
 
-  string_to_print = ""
-  for i in range(0, network_dime_x*network_dime_y):
-    string_to_print += "irq_out_"+str(i)+ ", "
-  noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic;\n")
+string_to_print = ""
+for i in range(0, network_dime_x*network_dime_y):
+  string_to_print += "irq_out_"+str(i)+ ", "
+noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic;\n")
 
-  string_to_print = ""
-  for i in range(0, network_dime_x*network_dime_y):
-    string_to_print += "test_"+str(i)+ ", "
-  noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 0);\n")
+string_to_print = ""
+for i in range(0, network_dime_x*network_dime_y):
+  string_to_print += "test_"+str(i)+ ", "
+noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 0);\n")
 
-  string_to_print = ""
-  for i in range(0, network_dime_x*network_dime_y):
-    string_to_print += "enable_"+str(i)+ ", "
-  noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic;\n")
-  string_to_print = ""
-  for i in range(0, network_dime_x*network_dime_y):
-    string_to_print += "write_byte_enable_"+str(i)+ ", "
-  noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(3 downto 0);\n")
-  string_to_print = ""
-  for i in range(0, network_dime_x*network_dime_y):
-    string_to_print += "address_"+str(i)+ ", "
-  noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 2);\n")
-  string_to_print = ""
-  for i in range(0, network_dime_x*network_dime_y):
-    string_to_print += "data_write_"+str(i)+ ", "
-  noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 0);\n")
-  string_to_print = ""
-  for i in range(0, network_dime_x*network_dime_y):
-    string_to_print += "data_read_"+str(i)+ ", "
-  noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 0);\n")
+string_to_print = ""
+for i in range(0, network_dime_x*network_dime_y):
+  string_to_print += "enable_"+str(i)+ ", "
+noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic;\n")
+string_to_print = ""
+for i in range(0, network_dime_x*network_dime_y):
+  string_to_print += "write_byte_enable_"+str(i)+ ", "
+noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(3 downto 0);\n")
+string_to_print = ""
+for i in range(0, network_dime_x*network_dime_y):
+  string_to_print += "address_"+str(i)+ ", "
+noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 2);\n")
+string_to_print = ""
+for i in range(0, network_dime_x*network_dime_y):
+  string_to_print += "data_write_"+str(i)+ ", "
+noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 0);\n")
+string_to_print = ""
+for i in range(0, network_dime_x*network_dime_y):
+  string_to_print += "data_read_"+str(i)+ ", "
+noc_file.write("\tsignal "+string_to_print[:-2]+": std_logic_vector(31 downto 0);\n")
 
 
 noc_file.write("\t--------------\n")
@@ -282,7 +282,7 @@ if add_NI:
     noc_file.write("-- connecting the NIs\n")
 
     for node_number in range(0, network_dime_x*network_dime_y):
-        noc_file.write("NI_" + str(node_number) + ": NI \n")
+      noc_file.write("NI_" + str(node_number) + ": NI \n")
       noc_file.write("   generic map(FIFO_DEPTH => " + str(fifo_depth) + ", CREDIT_COUNTER_LENGTH => " + str(int(ceil(log(fifo_depth)/log(2)))) + ",\n")
       noc_file.write("               current_x => " + str(node_number%network_dime_x) + ", current_y => " + str(node_number/network_dime_x) + ",\n")
       noc_file.write("               network_x => " + str(network_dime_x) + ",\n")
