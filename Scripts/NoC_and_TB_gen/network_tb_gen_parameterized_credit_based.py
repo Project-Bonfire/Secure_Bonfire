@@ -19,7 +19,6 @@ packet_size_max = 8
 verbal = False
 add_NI = False
 NI_depth = 0
-vc = False
 add_APP = False
 frame_size = 0
 add_tracker = False
@@ -28,9 +27,6 @@ add_tracker = False
 if '-D'  in sys.argv[1:]:
   network_dime_x = int(sys.argv[sys.argv.index('-D')+1])
   network_dime_y = int(sys.argv[sys.argv.index('-D')+2])
-
-if '-VC'  in sys.argv[1:]:
-  vc = True
 
 if '-DW' in sys.argv[1:]:
   data_width = int(sys.argv[sys.argv.index('-DW')+1])
@@ -171,9 +167,6 @@ for i in range(network_dime_x*network_dime_y):
     noc_file.write("\tRX_L_"+str(i)+": in std_logic_vector (DATA_WIDTH-1 downto 0);\n")
     noc_file.write("\tcredit_out_L_"+str(i)+", valid_out_L_"+str(i)+": out std_logic;\n")
     noc_file.write("\tcredit_in_L_"+str(i)+", valid_in_L_"+str(i)+": in std_logic;\n")
-    if vc:
-        noc_file.write("\tcredit_out_vc_L_"+str(i)+", valid_out_vc_L_"+str(i)+": out std_logic;\n")
-        noc_file.write("\tcredit_in_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+": in std_logic;\n")
     if i == network_dime_x*network_dime_y-1:
         noc_file.write("\tTX_L_"+str(i)+": out std_logic_vector (DATA_WIDTH-1 downto 0)\n")
     else:
@@ -192,20 +185,13 @@ for i in range(0, network_dime_x*network_dime_y):
     noc_file.write("\tsignal RX_L_"+str(i)+", TX_L_"+str(i)+":  std_logic_vector ("+str(data_width-1)+" downto 0);\n")
     noc_file.write("\tsignal credit_counter_out_"+str(i)+":  std_logic_vector ("+str(int(ceil(log(fifo_depth)/log(2)))-1)+" downto 0);\n")
     noc_file.write("\tsignal credit_out_L_"+str(i)+", credit_in_L_"+str(i)+", valid_in_L_"+str(i)+", valid_out_L_"+str(i) + ": std_logic;\n")
-    if vc:
-        noc_file.write("\tsignal credit_counter_out_vc_"+str(i)+":  std_logic_vector ("+str(int(ceil(log(fifo_depth)/log(2)))-1)+" downto 0);\n")
-        noc_file.write("\tsignal credit_out_vc_L_"+str(i)+", credit_in_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+", valid_out_vc_L_"+str(i) + ": std_logic;\n")
 
 if add_NI:
-  if vc:
-      noc_file.write("\tsignal reserved_address :        std_logic_vector(29 downto 0):= \"000000000000000001111111111110\";\n")
-      noc_file.write("\tsignal reserved_address_vc :     std_logic_vector(29 downto 0):= \"000000000000000001111111111111\";\n")
-  else:
-      noc_file.write("\tsignal reserved_address :        std_logic_vector(29 downto 0):= \"000000000000000001111111111111\";\n")
-  noc_file.write("\tsignal flag_address :            std_logic_vector(29 downto 0):= \"000000000000000010000000000000\" ; -- reserved address for the memory mapped I/O\n")
-  noc_file.write("\tsignal counter_address :         std_logic_vector(29 downto 0):= \"000000000000000010000000000001\";\n")
-  noc_file.write("\tsignal reconfiguration_address : std_logic_vector(29 downto 0):= \"000000000000000010000000000010\";  -- reserved address for reconfiguration register\n")
-  noc_file.write("\tsignal self_diagnosis_address :  std_logic_vector(29 downto 0):= \"000000000000000010000000000011\";\n")
+    noc_file.write("\tsignal reserved_address :        std_logic_vector(29 downto 0):= \"000000000000000001111111111111\";\n")
+    noc_file.write("\tsignal flag_address :            std_logic_vector(29 downto 0):= \"000000000000000010000000000000\" ; -- reserved address for the memory mapped I/O\n")
+    noc_file.write("\tsignal counter_address :         std_logic_vector(29 downto 0):= \"000000000000000010000000000001\";\n")
+    noc_file.write("\tsignal reconfiguration_address : std_logic_vector(29 downto 0):= \"000000000000000010000000000010\";  -- reserved address for reconfiguration register\n")
+    noc_file.write("\tsignal self_diagnosis_address :  std_logic_vector(29 downto 0):= \"000000000000000010000000000011\";\n")
 
   string_to_print = ""
   for i in range(0, network_dime_x*network_dime_y):
@@ -283,11 +269,7 @@ string_to_print += "NoC: network_"+str(network_dime_x)+"x"+str(network_dime_y)+"
 string_to_print += "port map (reset, clk, \n"
 
 for i in range(network_dime_x*network_dime_y):
-    if vc:
-        string_to_print += "\tRX_L_"+str(i)+", credit_out_L_"+str(i)+", valid_out_L_"+str(i)+", credit_in_L_"+str(i)+", valid_in_L_"+str(i)+\
-                                            ", credit_out_vc_L_"+str(i)+", valid_out_vc_L_"+str(i)+", credit_in_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+",  TX_L_"+str(i)+", \n"
-    else:
-        string_to_print += "\tRX_L_"+str(i)+", credit_out_L_"+str(i)+", valid_out_L_"+str(i)+", credit_in_L_"+str(i)+", valid_in_L_"+str(i)+",  TX_L_"+str(i)+", \n"
+    string_to_print += "\tRX_L_"+str(i)+", credit_out_L_"+str(i)+", valid_out_L_"+str(i)+", credit_in_L_"+str(i)+", valid_in_L_"+str(i)+",  TX_L_"+str(i)+", \n"
 
 noc_file.write(string_to_print[:len(string_to_print)-3])
 noc_file.write("\n            ); \n")
@@ -300,9 +282,6 @@ if add_NI:
     noc_file.write("-- connecting the NIs\n")
 
     for node_number in range(0, network_dime_x*network_dime_y):
-      if vc:
-          noc_file.write("NI_" + str(node_number) + ": NI_vc \n")
-      else:
         noc_file.write("NI_" + str(node_number) + ": NI \n")
       noc_file.write("   generic map(FIFO_DEPTH => " + str(fifo_depth) + ", CREDIT_COUNTER_LENGTH => " + str(int(ceil(log(fifo_depth)/log(2)))) + ",\n")
       noc_file.write("               current_x => " + str(node_number%network_dime_x) + ", current_y => " + str(node_number/network_dime_x) + ",\n")
@@ -321,16 +300,10 @@ if add_NI:
 
       noc_file.write("        credit_in => credit_out_L_" + str(node_number) + ", \n")
       noc_file.write("        valid_out => valid_in_L_" + str(node_number) + ",\n")
-      if vc:
-          noc_file.write("        credit_in_vc => credit_out_vc_L_" + str(node_number) + ", \n")
-          noc_file.write("        valid_out_vc => valid_in_vc_L_" + str(node_number) + ",\n")
       noc_file.write("        TX => RX_L_" + str(node_number) + ", -- data sent to the NoC\n")
       noc_file.write("        -- signals for reciving packets from the network\n")
       noc_file.write("        credit_out => credit_in_L_" + str(node_number) + ", \n")
       noc_file.write("        valid_in => valid_out_L_" + str(node_number) + ",\n")
-      if vc:
-          noc_file.write("        credit_out_vc => credit_in_vc_L_" + str(node_number) + ", \n")
-          noc_file.write("        valid_in_vc => valid_out_vc_L_" + str(node_number) + ",\n")
       noc_file.write("        RX => TX_L_" + str(node_number) + "\n")
       noc_file.write("  );\n")
 
@@ -350,10 +323,7 @@ if add_NI:
       else:
         noc_file.write("NI_control("+str(network_dime_x)+","+str(network_dime_y)+", "+str(frame_size)+", "+str(node_number)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", "+str(random_end)+" ns, \"NONE\",clk,\n")
       noc_file.write("           -- NI configuration\n")
-      if vc:
-          noc_file.write("           reserved_address, reserved_address_vc, flag_address, counter_address, reconfiguration_address,\n")
-      else:
-          noc_file.write("           reserved_address, flag_address, counter_address, reconfiguration_address,\n")
+      noc_file.write("           reserved_address, flag_address, counter_address, reconfiguration_address,\n")
       noc_file.write("           -- NI signals\n")
       noc_file.write("           enable_" + str(node_number) + ", write_byte_enable_" + str(node_number) + ", address_" + str(node_number) + ", data_write_" + str(node_number) + ", data_read_" + str(node_number) + ", test_"+str(node_number)+"); \n")
       noc_file.write("\n")
@@ -370,28 +340,13 @@ else:
           random_end = random.randint(random_start, 200)
 
         noc_file.write("credit_counter_control("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", clk, credit_out_L_"+str(i)+", valid_in_L_"+str(i)+", credit_counter_out_"+str(i)+");\n")
-
-        if vc:
-            noc_file.write("credit_counter_control("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", clk, credit_out_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+", credit_counter_out_vc_"+str(i)+");\n")
-
         if random_dest:
-            # TB_Package file for VC needs to be fixed !!!
-            if vc:
-                noc_file.write("gen_random_packet("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", "+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
-                        str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", credit_counter_out_vc_"+str(i)+", valid_in_vc_L_"+str(i)+", RX_L_"+str(i)+");\n")
-            else:
-                noc_file.write("gen_random_packet("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", "+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
+            noc_file.write("gen_random_packet("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", "+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
                               str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", RX_L_"+str(i)+");\n")
-        # Bit-Reversal traffic in TB_Package file for both normal and VC needs to be fixed !!!
         elif bit_reversal:
-            # Package file for VC needs to be fixed !!!
-            if vc:
-                noc_file.write("gen_bit_reversed_packet("+str(fifo_depth)+", "+str(int(ceil(log(fifo_depth)/log(2))))+", "+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
-                        str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", credit_counter_out_vc_"+str(i)+", valid_in_vc_L_"+str(i)+", RX_L_"+str(i)+");\n")
-            else:
-                # gen_bit_reversed_packet needs fixing!!!
-                noc_file.write("gen_bit_reversed_packet("+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
-                        str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", RX_L_"+str(i)+");\n")
+            # gen_bit_reversed_packet needs fixing!!!
+            noc_file.write("gen_bit_reversed_packet("+str(network_dime_x)+", "+str(network_dime_y)+", "+str(frame_size)+", "+str(i)+", "+str(random_start)+", " +str(packet_size_min)+", " +str(packet_size_max)+", " +
+                    str(random_end)+" ns, clk, credit_counter_out_"+str(i)+", valid_in_L_"+str(i)+", RX_L_"+str(i)+");\n")
 
         noc_file.write("\n")
 
@@ -399,11 +354,7 @@ else:
     noc_file.write("\n")
     noc_file.write("-- connecting the packet receivers\n")
     for i in range(0, network_dime_x*network_dime_y):
-        # Package file for VC needs to be fixed !!!
-        if vc:
-            noc_file.write("get_packet("+str(network_dime_x)+", "+str(data_width)+", 5, "+str(i)+", clk, credit_in_L_"+str(i)+", valid_out_L_"+str(i)+", credit_in_vc_L_"+str(i)+", valid_out_vc_L_"+str(i)+", TX_L_"+str(i)+");\n")
-        else:
-            noc_file.write("get_packet("+str(network_dime_x)+", "+str(data_width)+", 5, "+str(i)+", clk, credit_in_L_"+str(i)+", valid_out_L_"+str(i)+",  TX_L_"+str(i)+");\n")
+        noc_file.write("get_packet("+str(network_dime_x)+", "+str(data_width)+", 5, "+str(i)+", clk, credit_in_L_"+str(i)+", valid_out_L_"+str(i)+",  TX_L_"+str(i)+");\n")
 
 noc_file.write("\n\n")
 

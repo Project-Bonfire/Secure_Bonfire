@@ -21,7 +21,6 @@ def gen_network_and_tb(program_argv, flow_control_type):
         + " -D " + str(program_argv['network_dime_x']) + " " + str(program_argv['network_dime_y']) \
         + " -routing " + str(program_argv['routing']) \
         + (" -trace" if program_argv['trace'] else "") \
-        + (" -VC" if program_argv['vc'] else "") \
         + " -o " + SIMUL_DIR + "/" + net_file_name
 
     if DEBUG: print_msg(MSG_DEBUG, "Running network generator:\n\t" + net_gen_command)
@@ -43,7 +42,6 @@ def gen_network_and_tb(program_argv, flow_control_type):
         + " -D " + str(program_argv['network_dime_x']) + " " + str(program_argv['network_dime_y']) \
         + " -FIFOD " + str(program_argv['fifo_depth']) \
         + (" -Rand " + str(program_argv['rand']) if program_argv['rand'] != -1 else "") \
-        + (" -VC " if program_argv['vc'] else "") \
         + (" -APP " if program_argv['app'] else "") \
         + (" -trace" if program_argv['trace'] else "") \
         + (" -NI "+str(program_argv['NI_depth']) if program_argv['NI'] else "") \

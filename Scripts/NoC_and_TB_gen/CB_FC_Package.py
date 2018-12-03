@@ -18,7 +18,6 @@ class CreditBasedPackage():
         self.network_dime_x = 4
         self.network_dime_y = 4
         self.add_tracker = False
-        self.vc = False
         self.routing = 'xy'
 
     def sort_out_parameters(self, arguments_list):
@@ -34,7 +33,7 @@ class CreditBasedPackage():
             print "\t           generates a 2X2 network that has network interface and parity checker and fault " \
                   "injectors into ../output.vhd"
             return 1
-            
+
         if '-D' in arguments_list:
             self.network_dime_x = int(arguments_list[arguments_list.index('-D')+1])
             self.network_dime_y = int(arguments_list[arguments_list.index('-D')+2])
@@ -53,9 +52,6 @@ class CreditBasedPackage():
             self.routing = str(arguments_list[arguments_list.index('-routing')+1])
             if self.routing != 'xy' and self.routing != 'yx' and self.routing != 'wf' and self.routing != 'nl' and self.routing != 'nf' and self.routing != 'sr':
                 raise ValueError("Invalid routing algorithm, or not supported by Bonfire yet.")
-
-        if "-VC" in arguments_list:
-            self.vc = True
 
         if "-trace" in arguments_list:
             self.add_tracker = True

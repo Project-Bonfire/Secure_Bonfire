@@ -23,7 +23,6 @@ def arg_parser(argv, program_argv, logging):
     program_argv['network_dime_x'] = 4
     program_argv['network_dime_y'] = 4
     program_argv['fifo_depth'] = 4
-    program_argv['vc'] = False
     program_argv['app'] = False
     program_argv['NI'] = False
     program_argv['NI_depth'] = 0
@@ -53,9 +52,6 @@ def arg_parser(argv, program_argv, logging):
 
     if '-routing' in argv[1:]:
         program_argv['routing'] = str(argv[argv.index('-routing')+1])
-
-    if '-vc' in argv[1:]:
-        program_argv['vc'] = True
 
     if '-Rand'	in argv[1:]:
         program_argv['rand'] = float(argv[argv.index('-Rand')+1])

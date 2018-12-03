@@ -1,7 +1,7 @@
 # Copyright (C) 2016 Siavoosh Payandeh Azad, Behrad Niazmand
 
 
-def generate_entity(noc_file, network_dime_x, network_dime_y, vc):
+def generate_entity(noc_file, network_dime_x, network_dime_y):
     """
     noc_file:       string  : path to the network file
     network_dime_x:   integer : No. of nodes along X axis
@@ -19,9 +19,6 @@ def generate_entity(noc_file, network_dime_x, network_dime_y, vc):
         noc_file.write("\tRX_L_"+str(i)+": in std_logic_vector (DATA_WIDTH-1 downto 0);\n")
         noc_file.write("\tcredit_out_L_"+str(i)+", valid_out_L_"+str(i)+": out std_logic;\n")
         noc_file.write("\tcredit_in_L_"+str(i)+", valid_in_L_"+str(i)+": in std_logic;\n")
-        if vc:
-            noc_file.write("\tcredit_out_vc_L_"+str(i)+", valid_out_vc_L_"+str(i)+": out std_logic;\n")
-            noc_file.write("\tcredit_in_vc_L_"+str(i)+", valid_in_vc_L_"+str(i)+": in std_logic;\n")
         if i == network_dime_x*network_dime_y-1:
             noc_file.write("\tTX_L_"+str(i)+": out std_logic_vector (DATA_WIDTH-1 downto 0)\n")
         else:
