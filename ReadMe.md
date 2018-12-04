@@ -8,8 +8,8 @@ License:  	GNU GENERAL PUBLIC LICENSE Version 3
 
 ### Project Contributers
 
-- Cesar G. Chaves
-- Siavoosh Payandeh Azad
+- [Cesar G. Chaves](https://github.com/cesarchaves1)
+- [Siavoosh Payandeh Azad](https://github.com/siavooshpayandehazad)
 
 ***
 ### Documentation
