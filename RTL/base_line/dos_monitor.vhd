@@ -20,6 +20,8 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
+use std.textio.all;
+
 use work.router_pack.all;
 use ieee.std_logic_misc.all;
 
@@ -61,6 +63,9 @@ architecture behavior of dos_monitor is
   signal my_competitors_grants : std_logic_vector (4 downto 0);
   signal pres_delay_counter    : unsigned(9 downto 0);
   signal next_delay_counter    : unsigned(9 downto 0);
+  --
+  signal pres_competitors_log  : std_logic_vector (4 downto 0);
+  signal next_competitors_log  : std_logic_vector (4 downto 0);
 
 begin
 
@@ -73,11 +78,71 @@ begin
   dos_monitor_seq : process (clk, reset)
   begin
     if reset = '0' then
-      pres_delay_counter <= (others => '0');
+      pres_delay_counter   <= (others => '0');
+      pres_competitors_log <= (others => '0');
     elsif clk'event and clk = '1' then
-      pres_delay_counter <= next_delay_counter;
+      pres_delay_counter   <= next_delay_counter;
+      pres_competitors_log <= next_competitors_log;
     end if;
   end process;
+
+  ----monitor_comb : process (my_requests, grant_for_n_in, my_competitors_grants, pres_competitors_log)
+  --monitor_comb : process (clk)
+  --  file trace_file                                           : text is out "monitor_out.txt";
+  --  variable LINEVARIABLE                                     : line;
+  --begin
+  --    if G_ROUTER_ADDRESS = 11 and my_competitors_grants /= "00000" then
+  --      write(LINEVARIABLE,
+  --        "M " & time'image(now) & " " &
+  --        integer'image(G_ROUTER_ADDRESS) & " " &
+  --        integer'image(to_integer(unsigned(my_requests(4 downto 4)))) &
+  --        integer'image(to_integer(unsigned(my_requests(3 downto 3)))) &
+  --        integer'image(to_integer(unsigned(my_requests(2 downto 2)))) &
+  --        integer'image(to_integer(unsigned(my_requests(1 downto 1)))) &
+  --        integer'image(to_integer(unsigned(my_requests(0 downto 0)))) & " my_requests " &
+  --        integer'image(to_integer(unsigned(G_MONITORED_INPUT(4 downto 4)))) &
+  --        integer'image(to_integer(unsigned(G_MONITORED_INPUT(3 downto 3)))) &
+  --        integer'image(to_integer(unsigned(G_MONITORED_INPUT(2 downto 2)))) &
+  --        integer'image(to_integer(unsigned(G_MONITORED_INPUT(1 downto 1)))) &
+  --        integer'image(to_integer(unsigned(G_MONITORED_INPUT(0 downto 0)))) & " G_MONITORED_INPUT " &
+  --        integer'image(to_integer(unsigned(grant_for_n_in(4 downto 4)))) &
+  --        integer'image(to_integer(unsigned(grant_for_n_in(3 downto 3)))) &
+  --        integer'image(to_integer(unsigned(grant_for_n_in(2 downto 2)))) &
+  --        integer'image(to_integer(unsigned(grant_for_n_in(1 downto 1)))) &
+  --        integer'image(to_integer(unsigned(grant_for_n_in(0 downto 0)))) & " grant_for_n_in " &
+  --        integer'image(to_integer(unsigned(pres_competitors_log(4 downto 4)))) &
+  --        integer'image(to_integer(unsigned(pres_competitors_log(3 downto 3)))) &
+  --        integer'image(to_integer(unsigned(pres_competitors_log(2 downto 2)))) &
+  --        integer'image(to_integer(unsigned(pres_competitors_log(1 downto 1)))) &
+  --        integer'image(to_integer(unsigned(pres_competitors_log(0 downto 0)))) & " pres_competitors_log " &
+  --        integer'image(to_integer(unsigned(my_competitors_grants(4 downto 4)))) &
+  --        integer'image(to_integer(unsigned(my_competitors_grants(3 downto 3)))) &
+  --        integer'image(to_integer(unsigned(my_competitors_grants(2 downto 2)))) &
+  --        integer'image(to_integer(unsigned(my_competitors_grants(1 downto 1)))) &
+  --        integer'image(to_integer(unsigned(my_competitors_grants(0 downto 0)))) & " my_competitors_grants " );
+  --      writeline(trace_file, LINEVARIABLE);
+  --    end if;
+  --end process;
+
+
+  --==========================================================================
+  -- process competitors_log_comb is Combinational
+  -- Description: Updates next_competitors_log
+  -- Read: rx_in, valid_in, pres_competitors_log
+  -- Write: next_competitors_log
+  --==========================================================================
+  competitors_log_comb : process (rx_in, valid_in, pres_competitors_log, my_competitors_grants)
+  begin
+    --next_competitors_log <= pres_competitors_log;
+
+    if valid_in = '1' and rx_in(G_DATA_WIDTH-1 downto G_DATA_WIDTH-3) = "001" then
+        next_competitors_log <= (others => '0');
+    else
+        next_competitors_log <= pres_competitors_log or my_competitors_grants;
+    end if;
+
+  end process;
+
 
   --==========================================================================
   -- process dos_monitor_comb is Combinational
@@ -85,17 +150,20 @@ begin
   -- Read: rx_in, valid_in, pres_delay_counter
   -- Write: tx_out
   --==========================================================================
-  dos_monitor_comb : process (pres_delay_counter, rx_in, valid_in)
+  dos_monitor_comb : process (pres_delay_counter, rx_in, valid_in, pres_competitors_log, my_grants)
     variable v_tx : std_logic_vector (G_DATA_WIDTH-1 downto 0);
   begin
     tx_out <= rx_in;
     v_tx   := (others => '0');
+
     if valid_in = '1' and rx_in(G_DATA_WIDTH-1 downto G_DATA_WIDTH-3) = "100" then
       if to_integer(pres_delay_counter) > to_integer(unsigned(rx_in(G_DATA_WIDTH-12 downto G_DATA_WIDTH-21))) then
         v_tx                                          := (others => '0');
         v_tx (G_DATA_WIDTH-1)                         := '1';
         v_tx (G_DATA_WIDTH-4 downto G_DATA_WIDTH-11)  := std_logic_vector(to_unsigned(G_ROUTER_ADDRESS, 8));
         v_tx (G_DATA_WIDTH-12 downto G_DATA_WIDTH-21) := std_logic_vector(pres_delay_counter);
+        v_tx (G_DATA_WIDTH-22 downto G_DATA_WIDTH-26) := pres_competitors_log;
+        v_tx (G_DATA_WIDTH-27 downto G_DATA_WIDTH-31) := my_requests; --my_grants;
         v_tx (0)                                      := XOR_REDUCE(v_tx);
         tx_out                                        <= v_tx;
       end if;
@@ -188,7 +256,8 @@ begin
       when "01000" => v_my_competitors_grants := grant_for_e_in;
       when "00100" => v_my_competitors_grants := grant_for_w_in;
       when "00010" => v_my_competitors_grants := grant_for_s_in;
-      when others  => v_my_competitors_grants := grant_for_l_in;
+      when "00001" => v_my_competitors_grants := grant_for_l_in;
+      when others  => v_my_competitors_grants := "00000";
     end case;
     my_competitors_grants <= v_my_competitors_grants and not G_MONITORED_INPUT;
   end process;

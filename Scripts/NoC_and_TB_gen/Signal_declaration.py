@@ -33,4 +33,5 @@ def declare_signals(noc_file, network_dime_x, network_dime_y):
     for i in range(0, network_dime_x*network_dime_y):
         noc_file.write("\tsignal TX_N_"+str(i)+", TX_E_"+str(i)+", TX_W_"+str(i)+", TX_S_"+str(i) +
                        " : std_logic_vector (DATA_WIDTH-1 downto 0);\n")
+
     noc_file.write("\n")

@@ -1,6 +1,6 @@
 ################################################################################
 #
-# File name: track_packet.py 
+# File name: track_packet.py
 #
 # Copyright (C) 2018
 # Cesar G. Chaves A. (cesar.chaves@stud.fra-uas.de)
@@ -14,7 +14,7 @@
 import os
 import sys
 
-packet_id = 10 
+packet_id = 10
 source=9
 destination=3
 network_size = 4
@@ -69,7 +69,7 @@ if source != destination:
     y = src_y
 
     print ""
-    print '\033[96mRegistered for Packet ' + str(packet_id) + ' in the L input port of Router ' + str(source) + ' (' + str(x) + ',' + str(y) + ') :\033[0m' 
+    print '\033[96mRegistered for Packet ' + str(packet_id) + ' in the L input port of Router ' + str(source) + ' (' + str(x) + ',' + str(y) + ') :\033[0m'
     find_packet_in_log (packet_id, source, destination, source, 'L')
 
     while (x != dest_x) or (y != dest_y):
@@ -89,9 +89,9 @@ if source != destination:
                 router_port = 'S'
         router = router_coord2id (x, y, network_size)
         print ""
-        print '\033[96mRegistered for Packet ' + str(packet_id) + ' in the ' + router_port + ' input port of Router ' + str(router) + ' (' + str(x) + ',' + str(y) + ') :\033[0m' 
+        print '\033[96mRegistered for Packet ' + str(packet_id) + ' in the ' + router_port + ' input port of Router ' + str(router) + ' (' + str(x) + ',' + str(y) + ') :\033[0m'
         find_packet_in_log (packet_id, source, destination, router, router_port)
 
     print ""
-    print '\033[96mRegistered for Packet ' + str(packet_id) + ' in the L output port of Router ' + str(router) + ' (' + str(x) + ',' + str(y) + ') :\033[0m' 
+    print '\033[96mRegistered for Packet ' + str(packet_id) + ' in the L output port of Router ' + str(router) + ' (' + str(x) + ',' + str(y) + ') :\033[0m'
     find_packet_in_log (packet_id, source, destination, router, router_port)

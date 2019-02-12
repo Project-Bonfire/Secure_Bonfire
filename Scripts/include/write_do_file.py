@@ -33,6 +33,7 @@ def write_do_file(program_argv, net_file_name, net_tb_file_name, wave_do_file_na
 
     do_file.write("# Include files and compile them\n")
 
+
     do_file.write("vcom \"" + TEST_DIR + "/router_pack.vhd"+"\"\n")
     if program_argv['NI']:
         List_of_files = file_lists.credit_based_files_NI
