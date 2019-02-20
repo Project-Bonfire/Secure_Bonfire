@@ -25,5 +25,6 @@ The project documentation is maintained at [Project Wiki](https://github.com/Pro
 
 ***
 
-**CITE:** If you use the current repository in your work please cite the following paper:
-* Chaves, C.G.; Azad, S.P.; Hollstein, T.; Sepúlveda, J. DoS Attack Detection and Path Collision Localization in NoC-Based MPSoC Architectures. J. Low Power Electron. Appl. 2019, 9, 7.
+**CITE:** If you use the current repository in your work please cite one of the following papers:
+* Chaves, Cesar G.; Azad, Siavoosh P.; Hollstein, Thomas; Sepúlveda, Johanna. 2019. "DoS Attack Detection and Path Collision Localization in NoC-Based MPSoC Architectures." J. Low Power Electron. Appl. 9, no. 1: 7. 
+(https://doi.org/10.3390/jlpea9010007)
